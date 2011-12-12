@@ -2,21 +2,380 @@ package App::TimelogTxt;
 
 use warnings;
 use strict;
+use 5.010;
+
 use Carp;
+use POSIX qw(strftime);
+use Time::Local;
+use Getopt::Long qw(:config posix_default);
+use Config::Tiny;
 
-use version; $VERSION = qv('0.0.3');
+our $VERSION = '0.003';
 
-# Other recommended modules (uncomment to use):
-#  use IO::Prompt;
-#  use Perl6::Export;
-#  use Perl6::Slurp;
-#  use Perl6::Say;
+my %config = (
+    editor => '',
+    client => '',
+    dir => '',
+    logfile => '',
+    defcmd => '',
+);
+my $config_file = "$ENV{HOME}/.timelogrc";
+
+my %commands = (
+    'start'   => {
+        code => \&log_event,
+        synopsis => 'start {event description}',
+        help => 'Stop last event and start timing a new event.',
+    },
+    'stop'    => {
+        code => sub { log_event( 'stop' ); },
+        synopsis => 'stop',
+        help => 'Stop timing last event.',
+    },
+    'push'    => {
+        code => \&push_event,
+        synopsis => 'push {event description}',
+        help => 'Save last event on stack and start timing new event.',
+    },
+    'pop'     => {
+        code => \&pop_event,
+        synopsis => 'pop',
+        help => 'Stop last event and restart top event on stack.',
+    },
+    'drop'    => {
+        code => \&drop_event,
+        synopsis => 'drop [all]',
+        help => 'Drop top item from event stack or all if argument supplied.',
+    },
+    'ls'      => {
+        code => \&list_events,
+        synopsis => 'ls [today|yesterday|YYYY-MM-DD]',
+        help => 'List events for the specified day. Default to today.',
+    },
+    'lsproj'  => {
+        code => \&list_projects,
+        synopsis => 'lsproj',
+        help => 'List known projects.',
+    },
+    'lstk'    => {
+        code => \&list_stack,
+        synopsis => 'lstk',
+        help => 'Display items on the stack.',
+    },
+    'edit'    => {
+        code => sub { system $config{'editor'}, $config{'logfile'}; },
+        synopsis => 'edit',
+        help => 'Open the timelog file in the current editor',
+    },
+    'help'    => {
+        code => \&usage,
+        synopsis => 'help',
+        help => 'This screen',
+    },
+    'report'  => {
+        code => \&daily_report,
+        synopsis => 'report [today|yesterday|YYYY-MM-DD]',
+        help => 'Display a report for the specified day.',
+    },
+    'summary' => {
+        code => \&daily_summary,
+        synopsis => 'summary [today|yesterday|YYYY-MM-DD]',
+        help => q{Display a summary of the appropriate day's projects.},
+    },
+);
+
+sub run {
+    GetOptions(
+        "dir=s" => \$config{'dir'},
+        "file=s" => \$config{'logfile'},
+        "client=s" => \$config{'client'},
+        "editor=s" => \$config{'editor'},
+        "conf=s"   => \$config_file,
+    );
+
+    %config = initialize_configuration( $config_file );
+
+    # Handle default command if none specified
+    @ARGV = split / /, ($config{'defcmd'}||'stop') unless @ARGV;
+
+    # Handle alias if one is supplied
+    my $cmd = shift @ARGV;
+    if( exists $config{'alias'}->{$cmd} ) {
+        ($cmd, @ARGV) = ((split / /, $config{'alias'}->{$cmd}), @ARGV);
+    }
+
+    # Handle builtin commands
+    if ( exists $commands{$cmd} ) {
+        $commands{$cmd}->{'code'}->( @ARGV );
+    }
+    else {
+        print "Unrecognized command '$cmd'\n\n";
+        usage();
+    }
+}
+
+sub today_stamp {
+    return strftime( '%Y-%m-%d', localtime time );
+}
+
+sub day_stamp {
+    my ($day) = @_;
+    return today_stamp() if !$day or $day eq 'today';
+    return strftime( '%Y-%m-%d', localtime time-86400 ) if !$day or $day eq 'yesterday';
+    return $day if $day =~ m!^\d{4}[-/]\d{1,2}[-/]\d{1,2}$!;
+    # Parse the string to generate a reasonable guess for the day.
+}
+
+sub log_event {
+    open my $fh, '>>', $config{'logfile'} or die "Cannot open timelog ($config{'logfile'}): $!\n";
+    print $fh strftime( '%Y-%m-%d %T', localtime time ), " @_\n";
+    return;
+}
+
+sub initialize_configuration {
+    my ($config_file) = @_;
+    my $conf = -f $config_file ? Config::Tiny->read( $config_file ) : {};
+
+    delete @config{grep { !$config{$_} } keys %config};
+    %config = (
+        editor => $ENV{'VISUAL'} || $ENV{'EDITOR'} || '/usr/bin/vim',
+        client => 'cPanel',
+        dir => "$ENV{HOME}/timelog",
+        defcmd => 'stop',
+        ($conf->{_} ? %{$conf->{_}} : ()),
+        ($conf->{'alias'} ? ('alias'=>$conf->{'alias'}) : ()),
+        %config
+    );
+    $config{'dir'} =~ s/~/$ENV{HOME}/;
+    $config{'logfile'} ||= "$config{'dir'}/timelog.txt";
+    $config{'logfile'} =~ s/~/$ENV{HOME}/;
+    return %config;
+}
 
 
-# Module implementation here
+sub usage {
+    print "Commands:\n";
+    foreach my $c (sort keys %commands) {
+        my $d = $commands{$c};
+        print "$d->{synopsis}\n        $d->{help}\n";
+    }
+    print "\nAliases:\n";
+    foreach my $c ( sort keys %{$config{'alias'}} )
+    {
+        print "$c\t: $config{'alias'}->{$c}\n";
+    }
+}
+
+sub list_events {
+    my ($day) = @_;
+    $day ||= 'today';
+    my $stamp = day_stamp( $day );
+
+    open( my $fh, '<', $config{'logfile'} ) or die "Unable to open time log file: $!\n";
+    while(<$fh>)
+    {
+        print if 0 == index $_, $stamp;
+    }
+    return;
+}
+
+sub list_projects {
+    open( my $fh, '<', $config{'logfile'} ) or die "Unable to open time log file: $!\n";
+    my %projects;
+    while(<$fh>)
+    {
+        my (@projs) = m/\+(\S+)/g;
+        @projects{@projs} = (1) x @projs if @projs;
+    }
+    print "$_\n" foreach sort keys %projects;
+    return;
+}
+
+sub daily_report {
+    my ($day) = @_;
+
+    my $summary = extract_day_tasks( $day );
+
+    print_day_detail( $summary );
+    return;
+}
+
+sub daily_summary {
+    my ($day) = @_;
+
+    my $summary = extract_day_tasks( $day );
+
+    print_day_summary( $summary );
+    return;
+}
+
+sub extract_day_tasks {
+    my ($day) = @_;
+    $day ||= 'today';
+
+    my $stamp = day_stamp( $day );
+    my (%tasks, $last, $last_epoch, $last_proj, %proj_dur);
+    my ($start, $end, $task);
+
+    open( my $fh, '<', $config{'logfile'} ) or die "Unable to open time log file: $!\n";
+    while(<$fh>)
+    {
+        chop;
+        next if -1 == index $_, $stamp;
+
+        next unless my @fields = m{^(\d+)[-/](\d+)[-/](\d+)\s(\d+):(\d+):(\d+)\s+(.*)$};
+        $fields[0] -= 1900;
+        $fields[1] -= 1;
+        $task = pop @fields;
+        my ($proj) = $task =~ /\+(\S+)/;
+        my $epoch = timelocal( reverse @fields );
+        $start ||= $epoch;
+        $end = $epoch;
+        $tasks{$task} ||= { start=>$epoch, proj => $proj, dur=>0 } unless $task eq 'stop';
+
+        $tasks{$last}->{dur} += $epoch - $last_epoch if $last_epoch;
+        $proj_dur{$last_proj} += $epoch - $last_epoch if $last_proj;
+        $last = $task;
+        $last_epoch = $epoch;
+        $last_proj = $proj;
+    }
+
+    return unless $end;
+
+    if ( $day eq 'today' and $task ne 'stop' ) {
+        my $epoch = time;
+        $tasks{$last}->{dur} += $epoch - $last_epoch;
+        $proj_dur{$last_proj} += $epoch - $last_epoch;
+        $end = $epoch
+    }
+
+    return { stamp => $stamp, start => $start, end => $end, dur => $end-$start, tasks => \%tasks, proj_dur => \%proj_dur };
+}
+
+sub print_day_detail {
+    my ($summary) = @_;
+    return unless ref $summary;
+
+    my ($tasks, $proj_dur) = @$summary{ qw/tasks proj_dur/ };
+    my $last_proj = '';
+
+    print "$summary->{stamp}\n";
+    print " $config{'client'} ", format_dur( $summary->{dur} ), "\n";
+    foreach my $t ( sort { ($tasks->{$a}->{proj} cmp $tasks->{$b}->{proj}) || ($tasks->{$b}->{start} <=> $tasks->{$a}->{start}) }  keys %{$tasks} )
+    {
+        if( $tasks->{$t}->{proj} ne $last_proj )
+        {
+            printf '  %-13s%s',  $tasks->{$t}->{proj}, format_dur( $proj_dur->{$tasks->{$t}->{proj}} ). "\n";
+            $last_proj = $tasks->{$t}->{proj};
+        }
+        my $task = $t;
+        $task =~ s/\+\S+\s//;
+        if ( $task =~ s/\@(\S+)\s*// )
+        {
+            if ( $task ) {
+                printf "    %-20s%s (%s)\n", $1, format_dur( $tasks->{$t}->{dur} ), $task;
+            }
+            else {
+                printf "    %-20s%s\n", $1, format_dur( $tasks->{$t}->{dur} );
+            }
+        }
+        else {
+            printf "    %-20s%s\n", $task, format_dur( $tasks->{$t}->{dur} );
+        }
+    }
+    return;
+}
+
+sub print_day_summary {
+    my ($summary) = @_;
+    return unless ref $summary;
+
+    my $proj_dur = $summary->{proj_dur};
+
+    print "$summary->{stamp}\n";
+    print " $config{'client'} ", format_dur( $summary->{dur} ), "\n";
+    foreach my $p ( sort keys %{$proj_dur} )
+    {
+        printf '  %-13s%s',  $p, format_dur( $proj_dur->{$p} ). "\n";
+    }
+    return;
+}
+
+sub push_event {
+    {
+        open my $fh, '>>', "$config{'dir'}/stack.txt" or die "Unable to write to stack file: $!\n";
+        print $fh _get_last_event(), "\n";
+    }
+    log_event( @_ );
+}
+
+sub pop_event {
+    my $event = _pop_stack();
+    die "Event stack is empty.\n" unless $event;
+    log_event( $event );
+}
+
+sub drop_event {
+    my $arg = shift;
+    if( lc $arg eq 'all' )
+    {
+        unlink "$config{'dir'}/stack.txt";
+    }
+    else
+    {
+        _pop_stack();
+    }
+}
+
+sub _pop_stack {
+    open my $fh, '+<', "$config{'dir'}/stack.txt" or die "Unable to modify stack file: $!\n";
+    my ($lastpos, $lastline);
+    my ($pos, $line);
+    while( my ($line, $pos) = _readline_pos( $fh ) ) {
+        ($lastpos, $lastline) = ($pos, $line);
+    }
+    return unless defined $lastline;
+    seek( $fh, $lastpos, 0 );
+    truncate( $fh, $lastpos );
+    chomp $lastline;
+    return $lastline;
+}
+
+sub list_stack {
+    open my $fh, '<', "$config{'dir'}/stack.txt" or die "Unable to modify stack file: $!\n";
+    my @lines = <$fh>;
+    @lines = reverse @lines if @lines > 1;
+    print @lines;
+    return;
+}
+
+sub _readline_pos {
+    my $fh = shift;
+    my $pos = tell $fh;
+    my $line = <$fh>;
+    return ($line, $pos) if defined $line;
+    return;
+}
+
+sub _get_last_event {
+    open( my $fh, '<', $config{'logfile'} ) or die "Unable to open time log file: $!\n";
+    my $event_line;
+    $event_line = $_ while <$fh>;
+    chomp $event_line;
+    $event_line =~  s{^(\d+)[-/](\d+)[-/](\d+)\s(\d+):(\d+):(\d+)\s+}{}; # strip timestamp
+
+    return $event_line;
+}
+
+sub format_dur
+{
+    my ($dur) = @_;
+    $dur += 30; # round, don't truncate.
+    sprintf '%2d:%02d', int($dur/3600), int(($dur%3600)/60);
+}
 
 
-1; # Magic true value required at end of module
+1;
 __END__
 
 =head1 NAME
@@ -26,7 +385,7 @@ App::TimelogTxt - [One line description of module's purpose here]
 
 =head1 VERSION
 
-This document describes App::TimelogTxt version 0.0.1
+This document describes App::TimelogTxt version 0.003
 
 
 =head1 SYNOPSIS

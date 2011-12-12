@@ -10,7 +10,10 @@ WriteMakefile(
     PL_FILES            => {},
     PREREQ_PM => {
         'Test::More' => 0,
-        'version'    => 0,
+        'POSIX'    => 0,
+        'Time::Local' => 0,
+        'Getopt::Long' => 0,
+        'Config::Tiny' => 0,
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'App-TimelogTxt-*' },
