@@ -147,8 +147,10 @@ sub initialize_configuration {
         %config
     );
     $config{'dir'} =~ s/~/$ENV{HOME}/;
-    $config{'logfile'} ||= "$config{'dir'}/timelog.txt";
-    $config{'logfile'} =~ s/~/$ENV{HOME}/;
+    foreach my $d (([qw/logfile timelog.txt/], [qw/stackfile stack.txt/], [qw/reportfile report.txt/], [qw/archive archive.txt/])) {
+        $config{$d->[0]} ||= "$config{'dir'}/$d->[1]";
+        $config{$d->[0]} =~ s/~/$ENV{HOME}/;
+    }
     return %config;
 }
 
@@ -303,7 +305,7 @@ sub print_day_summary {
 
 sub push_event {
     {
-        open my $fh, '>>', "$config{'dir'}/stack.txt" or die "Unable to write to stack file: $!\n";
+        open my $fh, '>>', $config{'stackfile'} or die "Unable to write to stack file: $!\n";
         print $fh _get_last_event(), "\n";
     }
     log_event( @_ );
@@ -319,7 +321,7 @@ sub drop_event {
     my $arg = shift;
     if( lc $arg eq 'all' )
     {
-        unlink "$config{'dir'}/stack.txt";
+        unlink $config{'stackfile'};
     }
     else
     {
@@ -328,7 +330,7 @@ sub drop_event {
 }
 
 sub _pop_stack {
-    open my $fh, '+<', "$config{'dir'}/stack.txt" or die "Unable to modify stack file: $!\n";
+    open my $fh, '+<', $config{'stackfile'} or die "Unable to modify stack file: $!\n";
     my ($lastpos, $lastline);
     my ($pos, $line);
     while( my ($line, $pos) = _readline_pos( $fh ) ) {
@@ -342,7 +344,7 @@ sub _pop_stack {
 }
 
 sub list_stack {
-    open my $fh, '<', "$config{'dir'}/stack.txt" or die "Unable to modify stack file: $!\n";
+    open my $fh, '<', $config{'stackfile'} or die "Unable to modify stack file: $!\n";
     my @lines = <$fh>;
     @lines = reverse @lines if @lines > 1;
     print @lines;
@@ -373,7 +375,6 @@ sub format_dur
     $dur += 30; # round, don't truncate.
     sprintf '%2d:%02d', int($dur/3600), int(($dur%3600)/60);
 }
-
 
 1;
 __END__
