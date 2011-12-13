@@ -121,8 +121,24 @@ sub today_stamp {
 sub day_stamp {
     my ($day) = @_;
     return today_stamp() if !$day or $day eq 'today';
-    return strftime( '%Y-%m-%d', localtime time-86400 ) if !$day or $day eq 'yesterday';
     return $day if $day =~ m!^\d{4}[-/]\d{1,2}[-/]\d{1,2}$!;
+    my $now = time;
+    my $delta = 0;
+    if( $day eq 'yesterday' ) {
+        $delta = 1;
+    }
+    else {
+        my $wday = (localtime $now)[6];
+        my $index = 0;
+        foreach my $try (qw/sunday monday tuesday wednesday thursday friday saturday/) {
+            last if $try eq $day;
+            ++$index;
+        }
+        return if $index > 6;
+        $delta = $wday - $index;
+        $delta+=7 if $delta < 1;
+    }
+    return strftime( '%Y-%m-%d', localtime $now-86400*$delta ) if $delta;
     # Parse the string to generate a reasonable guess for the day.
 }
 
