@@ -142,7 +142,7 @@ sub day_stamp {
 
 sub log_event {
     open my $fh, '>>', $config{'logfile'} or die "Cannot open timelog ($config{'logfile'}): $!\n";
-    print $fh strftime( '%Y-%m-%d %T', localtime time ), " @_\n";
+    print {$fh} strftime( '%Y-%m-%d %T', localtime time ), " @_\n";
     return;
 }
 
@@ -219,7 +219,7 @@ sub daily_report {
 
     my $summary = extract_day_tasks( $day );
 
-    print_day_detail( $summary );
+    print_day_detail( $summary, \*STDOUT );
     return;
 }
 
@@ -228,7 +228,7 @@ sub daily_summary {
 
     my $summary = extract_day_tasks( $day );
 
-    print_day_summary( $summary );
+    print_day_summary( $summary, \*STDOUT );
     return;
 }
 
@@ -276,19 +276,20 @@ sub extract_day_tasks {
 }
 
 sub print_day_detail {
-    my ($summary) = @_;
+    my ($summary, $fh) = @_;
     return unless ref $summary;
+    $fh ||= \*STDOUT;
 
     my ($tasks, $proj_dur) = @$summary{ qw/tasks proj_dur/ };
     my $last_proj = '';
 
-    print "$summary->{stamp}\n";
-    print " $config{'client'} ", format_dur( $summary->{dur} ), "\n";
+    print {$fh} "\n$summary->{stamp}\n";
+    print {$fh} " $config{'client'} ", format_dur( $summary->{dur} ), "\n";
     foreach my $t ( sort { ($tasks->{$a}->{proj} cmp $tasks->{$b}->{proj}) || ($tasks->{$b}->{start} <=> $tasks->{$a}->{start}) }  keys %{$tasks} )
     {
         if( $tasks->{$t}->{proj} ne $last_proj )
         {
-            printf '  %-13s%s',  $tasks->{$t}->{proj}, format_dur( $proj_dur->{$tasks->{$t}->{proj}} ). "\n";
+            printf {$fh} '  %-13s%s',  $tasks->{$t}->{proj}, format_dur( $proj_dur->{$tasks->{$t}->{proj}} ). "\n";
             $last_proj = $tasks->{$t}->{proj};
         }
         my $task = $t;
@@ -296,30 +297,31 @@ sub print_day_detail {
         if ( $task =~ s/\@(\S+)\s*// )
         {
             if ( $task ) {
-                printf "    %-20s%s (%s)\n", $1, format_dur( $tasks->{$t}->{dur} ), $task;
+                printf {$fh} "    %-20s%s (%s)\n", $1, format_dur( $tasks->{$t}->{dur} ), $task;
             }
             else {
-                printf "    %-20s%s\n", $1, format_dur( $tasks->{$t}->{dur} );
+                printf {$fh} "    %-20s%s\n", $1, format_dur( $tasks->{$t}->{dur} );
             }
         }
         else {
-            printf "    %-20s%s\n", $task, format_dur( $tasks->{$t}->{dur} );
+            printf {$fh} "    %-20s%s\n", $task, format_dur( $tasks->{$t}->{dur} );
         }
     }
     return;
 }
 
 sub print_day_summary {
-    my ($summary) = @_;
+    my ($summary, $fh) = @_;
     return unless ref $summary;
+    $fh ||= \*STDOUT;
 
     my $proj_dur = $summary->{proj_dur};
 
-    print "$summary->{stamp}\n";
-    print " $config{'client'} ", format_dur( $summary->{dur} ), "\n";
+    print {$fh} "$summary->{stamp}\n";
+    print {$fh} " $config{'client'} ", format_dur( $summary->{dur} ), "\n";
     foreach my $p ( sort keys %{$proj_dur} )
     {
-        printf '  %-13s%s',  $p, format_dur( $proj_dur->{$p} ). "\n";
+        printf {$fh} '  %-13s%s',  $p, format_dur( $proj_dur->{$p} ). "\n";
     }
     return;
 }
@@ -327,7 +329,7 @@ sub print_day_summary {
 sub push_event {
     {
         open my $fh, '>>', $config{'stackfile'} or die "Unable to write to stack file: $!\n";
-        print $fh _get_last_event(), "\n";
+        print {$fh} _get_last_event(), "\n";
     }
     log_event( @_ );
 }
