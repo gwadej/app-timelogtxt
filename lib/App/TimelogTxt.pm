@@ -16,7 +16,6 @@ my %config = (
     editor => '',
     client => '',
     dir => '',
-    logfile => '',
     defcmd => '',
 );
 my $config_file = "$ENV{HOME}/.timelogrc";
@@ -49,7 +48,7 @@ my %commands = (
     },
     'ls'      => {
         code => \&list_events,
-        synopsis => 'ls [today|yesterday|YYYY-MM-DD]',
+        synopsis => 'ls [date]',
         help => 'List events for the specified day. Default to today.',
     },
     'lsproj'  => {
@@ -69,17 +68,17 @@ my %commands = (
     },
     'help'    => {
         code => \&usage,
-        synopsis => 'help',
-        help => 'This screen',
+        synopsis => 'help [commands|aliases]',
+        help => 'A list of commands and/or aliases. Limit display with the argument.',
     },
     'report'  => {
         code => \&daily_report,
-        synopsis => 'report [today|yesterday|YYYY-MM-DD]',
+        synopsis => 'report [date]',
         help => 'Display a report for the specified day.',
     },
     'summary' => {
         code => \&daily_summary,
-        synopsis => 'summary [today|yesterday|YYYY-MM-DD]',
+        synopsis => 'summary [date]',
         help => q{Display a summary of the appropriate day's projects.},
     },
 );
@@ -87,7 +86,6 @@ my %commands = (
 sub run {
     GetOptions(
         "dir=s" => \$config{'dir'},
-        "file=s" => \$config{'logfile'},
         "client=s" => \$config{'client'},
         "editor=s" => \$config{'editor'},
         "conf=s"   => \$config_file,
@@ -164,7 +162,7 @@ sub initialize_configuration {
     );
     $config{'dir'} =~ s/~/$ENV{HOME}/;
     foreach my $d (([qw/logfile timelog.txt/], [qw/stackfile stack.txt/], [qw/reportfile report.txt/], [qw/archive archive.txt/])) {
-        $config{$d->[0]} ||= "$config{'dir'}/$d->[1]";
+        $config{$d->[0]} = "$config{'dir'}/$d->[1]";
         $config{$d->[0]} =~ s/~/$ENV{HOME}/;
     }
     return %config;
@@ -172,15 +170,22 @@ sub initialize_configuration {
 
 
 sub usage {
-    print "Commands:\n";
-    foreach my $c (sort keys %commands) {
-        my $d = $commands{$c};
-        print "$d->{synopsis}\n        $d->{help}\n";
+    my ($arg) = @_;
+    if( !$arg or $arg eq 'commands' ) {
+        print "\nCommands:\n";
+        foreach my $c (sort keys %commands) {
+            my $d = $commands{$c};
+            print "$d->{synopsis}\n        $d->{help}\n";
+        }
+        print "\nwhere [date] is an optional string specifying a date of the form YYYY-MM-DD
+or a day name: yesterday, today, or sunday .. saturday.\n";
     }
-    print "\nAliases:\n";
-    foreach my $c ( sort keys %{$config{'alias'}} )
-    {
-        print "$c\t: $config{'alias'}->{$c}\n";
+    if( !$arg or $arg eq 'aliases' ) {
+        print "\nAliases:\n";
+        foreach my $c ( sort keys %{$config{'alias'}} )
+        {
+            print "$c\t: $config{'alias'}->{$c}\n";
+        }
     }
 }
 
