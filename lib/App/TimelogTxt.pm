@@ -312,6 +312,7 @@ sub push_event {
 }
 
 sub pop_event {
+    return unless -f $config{'stackfile'};
     my $event = _pop_stack();
     die "Event stack is empty.\n" unless $event;
     log_event( $event );
@@ -319,6 +320,7 @@ sub pop_event {
 
 sub drop_event {
     my $arg = shift;
+    return unless -f $config{'stackfile'};
     if( lc $arg eq 'all' )
     {
         unlink $config{'stackfile'};
@@ -330,6 +332,7 @@ sub drop_event {
 }
 
 sub _pop_stack {
+    return unless -f $config{'stackfile'};
     open my $fh, '+<', $config{'stackfile'} or die "Unable to modify stack file: $!\n";
     my ($lastpos, $lastline);
     my ($pos, $line);
@@ -344,7 +347,8 @@ sub _pop_stack {
 }
 
 sub list_stack {
-    open my $fh, '<', $config{'stackfile'} or die "Unable to modify stack file: $!\n";
+    return unless -f $config{'stackfile'};
+    open my $fh, '<', $config{'stackfile'} or die "Unable to read stack file: $!\n";
     my @lines = <$fh>;
     @lines = reverse @lines if @lines > 1;
     print @lines;
