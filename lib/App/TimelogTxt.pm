@@ -220,7 +220,7 @@ sub daily_report {
 
     my $summary = extract_day_tasks( $day );
 
-    print_day_detail( $summary, \*STDOUT );
+    $summary->print_day_detail( \*STDOUT );
     return;
 }
 
@@ -229,7 +229,7 @@ sub daily_summary {
 
     my $summary = extract_day_tasks( $day );
 
-    print_day_summary( $summary, \*STDOUT );
+    $summary->print_day_summary( \*STDOUT );
     return;
 }
 
@@ -238,7 +238,7 @@ sub extract_day_tasks {
     $day ||= 'today';
 
     my $stamp = day_stamp( $day );
-    my $summary = App::TimelogTxt::Day->new( $stamp );
+    my $summary = App::TimelogTxt::Day->new( $stamp, $config{'client'} );
     my %last;
     my $task;
 
@@ -276,57 +276,6 @@ sub extract_day_tasks {
     }
 
     return $summary;
-}
-
-sub print_day_detail {
-    my ($summary, $fh) = @_;
-    return unless ref $summary;
-    $fh ||= \*STDOUT;
-
-    my ($tasks, $proj_dur) = @$summary{ qw/tasks proj_dur/ };
-    my $last_proj = '';
-
-    print {$fh} "\n$summary->{stamp}\n";
-    print {$fh} " $config{'client'} ", format_dur( $summary->{dur} ), "\n";
-    foreach my $t ( sort { ($tasks->{$a}->{proj} cmp $tasks->{$b}->{proj}) || ($tasks->{$b}->{start} <=> $tasks->{$a}->{start}) }  keys %{$tasks} )
-    {
-        if( $tasks->{$t}->{proj} ne $last_proj )
-        {
-            printf {$fh} '  %-13s%s',  $tasks->{$t}->{proj}, format_dur( $proj_dur->{$tasks->{$t}->{proj}} ). "\n";
-            $last_proj = $tasks->{$t}->{proj};
-        }
-        my $task = $t;
-        $task =~ s/\+\S+\s//;
-        if ( $task =~ s/\@(\S+)\s*// )
-        {
-            if ( $task ) {
-                printf {$fh} "    %-20s%s (%s)\n", $1, format_dur( $tasks->{$t}->{dur} ), $task;
-            }
-            else {
-                printf {$fh} "    %-20s%s\n", $1, format_dur( $tasks->{$t}->{dur} );
-            }
-        }
-        else {
-            printf {$fh} "    %-20s%s\n", $task, format_dur( $tasks->{$t}->{dur} );
-        }
-    }
-    return;
-}
-
-sub print_day_summary {
-    my ($summary, $fh) = @_;
-    return unless ref $summary;
-    $fh ||= \*STDOUT;
-
-    my $proj_dur = $summary->{proj_dur};
-
-    print {$fh} "$summary->{stamp}\n";
-    print {$fh} " $config{'client'} ", format_dur( $summary->{dur} ), "\n";
-    foreach my $p ( sort keys %{$proj_dur} )
-    {
-        printf {$fh} '  %-13s%s',  $p, format_dur( $proj_dur->{$p} ). "\n";
-    }
-    return;
 }
 
 sub push_event {
@@ -397,13 +346,6 @@ sub _get_last_event {
     $event_line =~  s{^(\d+)[-/](\d+)[-/](\d+)\s(\d+):(\d+):(\d+)\s+}{}; # strip timestamp
 
     return $event_line;
-}
-
-sub format_dur
-{
-    my ($dur) = @_;
-    $dur += 30; # round, don't truncate.
-    sprintf '%2d:%02d', int($dur/3600), int(($dur%3600)/60);
 }
 
 1;

@@ -9,9 +9,10 @@ use Carp;
 our $VERSION = '0.0.3';
 
 sub new {
-    my ($class, $stamp) = @_;
+    my ($class, $stamp, $client) = @_;
     bless {
         stamp => $stamp,
+        client => $client,
         start => undef,
         dur => 0,
         tasks => {},
@@ -43,6 +44,62 @@ sub start_task {
     return if $self->{tasks}->{$task};
     $self->{tasks}->{$task} = { start => $start, proj => $proj, dur => 0 };
     return;
+}
+
+sub print_day_detail {
+    my ($self, $fh, $client) = @_;
+    $fh ||= \*STDOUT;
+
+    my ($tasks, $proj_dur) = @$self{ qw/tasks proj_dur/ };
+    my $last_proj = '';
+
+    print {$fh} "\n$self->{stamp}\n";
+    print {$fh} " $self->{client} ", _format_dur( $self->{dur} ), "\n";
+    foreach my $t ( sort { ($tasks->{$a}->{proj} cmp $tasks->{$b}->{proj}) || ($tasks->{$b}->{start} <=> $tasks->{$a}->{start}) }  keys %{$tasks} )
+    {
+        if( $tasks->{$t}->{proj} ne $last_proj )
+        {
+            printf {$fh} '  %-13s%s',  $tasks->{$t}->{proj}, _format_dur( $proj_dur->{$tasks->{$t}->{proj}} ). "\n";
+            $last_proj = $tasks->{$t}->{proj};
+        }
+        my $task = $t;
+        $task =~ s/\+\S+\s//;
+        if ( $task =~ s/\@(\S+)\s*// )
+        {
+            if ( $task ) {
+                printf {$fh} "    %-20s%s (%s)\n", $1, _format_dur( $tasks->{$t}->{dur} ), $task;
+            }
+            else {
+                printf {$fh} "    %-20s%s\n", $1, _format_dur( $tasks->{$t}->{dur} );
+            }
+        }
+        else {
+            printf {$fh} "    %-20s%s\n", $task, _format_dur( $tasks->{$t}->{dur} );
+        }
+    }
+    return;
+}
+
+sub print_day_summary {
+    my ($self, $fh) = @_;
+    $fh ||= \*STDOUT;
+
+    my $proj_dur = $self->{proj_dur};
+
+    print {$fh} "$self->{stamp}\n";
+    print {$fh} " $self->{client} ", _format_dur( $self->{dur} ), "\n";
+    foreach my $p ( sort keys %{$proj_dur} )
+    {
+        printf {$fh} '  %-13s%s',  $p, _format_dur( $proj_dur->{$p} ). "\n";
+    }
+    return;
+}
+
+sub _format_dur
+{
+    my ($dur) = @_;
+    $dur += 30; # round, don't truncate.
+    return sprintf '%2d:%02d', int($dur/3600), int(($dur%3600)/60);
 }
 
 1;
