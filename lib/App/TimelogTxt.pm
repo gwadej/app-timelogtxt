@@ -254,10 +254,7 @@ sub extract_day_tasks {
         my $epoch = timelocal( reverse @fields );
         $start ||= $epoch;
 
-        my $curr_dur = $last{epoch} ? $epoch - $last{epoch} : 0;
-        $tasks{$last{task}}->{dur} += $curr_dur  if $last{task};
-        $proj_dur{$last{proj}} += $curr_dur if $last{proj};
-        $total_dur += $curr_dur;
+        $total_dur += _update_dur( \%last, \%proj_dur, \%tasks, $epoch );
 
         if ( $task eq 'stop' )
         {
@@ -275,16 +272,22 @@ sub extract_day_tasks {
     return unless $total_dur;
 
     if ( $day eq 'today' and $task ne 'stop' ) {
-        my $epoch = time;
-
-        my $curr_dur = $last{epoch} ? $epoch - $last{epoch} : 0;
-        $tasks{$last{task}}->{dur} += $curr_dur  if $last{task};
-        $proj_dur{$last{proj}} += $curr_dur if $last{proj};
-        $total_dur += $curr_dur;
+        $total_dur += _update_dur( \%last, \%proj_dur, \%tasks, time );
     }
 
     return { stamp => $stamp, start => $start, dur => $total_dur, tasks => \%tasks, proj_dur => \%proj_dur };
 }
+
+sub _update_dur {
+    my ($last, $proj_dur, $tasks, $epoch) = @_;
+    my $curr_dur = $last->{epoch} ? $epoch - $last->{epoch} : 0;
+
+    $tasks->{$last->{task}}->{dur} += $curr_dur if $last->{task};
+    $proj_dur->{$last->{proj}} += $curr_dur     if $last->{proj};
+
+    return $curr_dur;
+}
+
 
 sub print_day_detail {
     my ($summary, $fh) = @_;
