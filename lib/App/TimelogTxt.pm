@@ -236,15 +236,21 @@ sub extract_day_tasks {
     my ($day) = @_;
     $day ||= 'today';
 
-    my $stamp = day_stamp( $day );
-    my (%tasks, %proj_dur, %last);
-    my ($start, $task, $total_dur);
+    my $summary = {
+        stamp => day_stamp( $day ),
+        start => undef,
+        dur => 0,
+        tasks => {},
+        proj_dur => {},
+    };
+    my %last;
+    my $task;
 
     open( my $fh, '<', $config{'logfile'} ) or die "Unable to open time log file: $!\n";
     while(<$fh>)
     {
-        chop;
-        next if -1 == index $_, $stamp;
+        chomp;
+        next if -1 == index $_, $summary->{stamp};
 
         next unless my @fields = m{^(\d+)[-/](\d+)[-/](\d+)\s(\d+):(\d+):(\d+)\s+(.*)$};
         $fields[0] -= 1900;
@@ -252,9 +258,9 @@ sub extract_day_tasks {
         $task = pop @fields;
         my ($proj) = $task =~ /\+(\S+)/;
         my $epoch = timelocal( reverse @fields );
-        $start ||= $epoch;
+        $summary->{start} ||= $epoch;
 
-        $total_dur += _update_dur( \%last, \%proj_dur, \%tasks, $epoch );
+        _update_dur( $summary, \%last, $epoch );
 
         if ( $task eq 'stop' )
         {
@@ -262,30 +268,29 @@ sub extract_day_tasks {
         }
         else
         {
-            $tasks{$task} ||= { start=>$epoch, proj => $proj, dur=>0 };
-            $last{task} = $task;
-            $last{epoch} = $epoch;
-            $last{proj} = $proj;
+            $summary->{tasks}->{$task} ||= { start => $epoch, proj => $proj, dur => 0 };
+            @last{qw/task epoch proj/} = ( $task, $epoch, $proj );
         }
     }
 
-    return unless $total_dur;
+    return unless $summary->{dur};
 
     if ( $day eq 'today' and $task ne 'stop' ) {
-        $total_dur += _update_dur( \%last, \%proj_dur, \%tasks, time );
+        _update_dur( $summary, \%last, time );
     }
 
-    return { stamp => $stamp, start => $start, dur => $total_dur, tasks => \%tasks, proj_dur => \%proj_dur };
+    return $summary;
 }
 
 sub _update_dur {
-    my ($last, $proj_dur, $tasks, $epoch) = @_;
+    my ($day_tasks, $last, $epoch) = @_;
     my $curr_dur = $last->{epoch} ? $epoch - $last->{epoch} : 0;
 
-    $tasks->{$last->{task}}->{dur} += $curr_dur if $last->{task};
-    $proj_dur->{$last->{proj}} += $curr_dur     if $last->{proj};
+    $day_tasks->{tasks}->{$last->{task}}->{dur} += $curr_dur if $last->{task};
+    $day_tasks->{proj_dur}->{$last->{proj}} += $curr_dur     if $last->{proj};
+    $day_tasks->{dur} += $curr_dur;
 
-    return $curr_dur;
+    return;
 }
 
 
