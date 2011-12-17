@@ -237,7 +237,7 @@ sub extract_day_tasks {
     $day ||= 'today';
 
     my $stamp = day_stamp( $day );
-    my (%tasks, $last_task, $last_epoch, $last_proj, %proj_dur);
+    my (%tasks, %proj_dur, %last);
     my ($start, $task, $total_dur);
 
     open( my $fh, '<', $config{'logfile'} ) or die "Unable to open time log file: $!\n";
@@ -254,21 +254,21 @@ sub extract_day_tasks {
         my $epoch = timelocal( reverse @fields );
         $start ||= $epoch;
 
-        my $curr_dur = $last_epoch ? $epoch - $last_epoch : 0;
-        $tasks{$last_task}->{dur} += $curr_dur  if $last_task;
-        $proj_dur{$last_proj} += $curr_dur if $last_proj;
+        my $curr_dur = $last{epoch} ? $epoch - $last{epoch} : 0;
+        $tasks{$last{task}}->{dur} += $curr_dur  if $last{task};
+        $proj_dur{$last{proj}} += $curr_dur if $last{proj};
         $total_dur += $curr_dur;
 
         if ( $task eq 'stop' )
         {
-            $last_task = $last_epoch = $last_proj = undef;
+            %last = ();
         }
         else
         {
             $tasks{$task} ||= { start=>$epoch, proj => $proj, dur=>0 };
-            $last_task = $task;
-            $last_epoch = $epoch;
-            $last_proj = $proj;
+            $last{task} = $task;
+            $last{epoch} = $epoch;
+            $last{proj} = $proj;
         }
     }
 
@@ -276,9 +276,10 @@ sub extract_day_tasks {
 
     if ( $day eq 'today' and $task ne 'stop' ) {
         my $epoch = time;
-        my $curr_dur = $last_epoch ? $epoch - $last_epoch : 0;
-        $tasks{$last_task}->{dur} += $curr_dur  if $last_task;
-        $proj_dur{$last_proj} += $curr_dur if $last_proj;
+
+        my $curr_dur = $last{epoch} ? $epoch - $last{epoch} : 0;
+        $tasks{$last{task}}->{dur} += $curr_dur  if $last{task};
+        $proj_dur{$last{proj}} += $curr_dur if $last{proj};
         $total_dur += $curr_dur;
     }
 
