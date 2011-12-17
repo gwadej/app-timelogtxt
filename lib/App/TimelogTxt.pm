@@ -9,6 +9,7 @@ use POSIX qw(strftime);
 use Time::Local;
 use Getopt::Long qw(:config posix_default);
 use Config::Tiny;
+use App::TimelogTxt::Day;
 
 our $VERSION = '0.003';
 
@@ -236,13 +237,8 @@ sub extract_day_tasks {
     my ($day) = @_;
     $day ||= 'today';
 
-    my $summary = {
-        stamp => day_stamp( $day ),
-        start => undef,
-        dur => 0,
-        tasks => {},
-        proj_dur => {},
-    };
+    my $stamp = day_stamp( $day );
+    my $summary = App::TimelogTxt::Day->new( $stamp );
     my %last;
     my $task;
 
@@ -250,7 +246,7 @@ sub extract_day_tasks {
     while(<$fh>)
     {
         chomp;
-        next if -1 == index $_, $summary->{stamp};
+        next if -1 == index $_, $stamp;
 
         next unless my @fields = m{^(\d+)[-/](\d+)[-/](\d+)\s(\d+):(\d+):(\d+)\s+(.*)$};
         $fields[0] -= 1900;
@@ -258,9 +254,9 @@ sub extract_day_tasks {
         $task = pop @fields;
         my ($proj) = $task =~ /\+(\S+)/;
         my $epoch = timelocal( reverse @fields );
-        $summary->{start} ||= $epoch;
+        $summary->set_start( $epoch );
 
-        _update_dur( $summary, \%last, $epoch );
+        $summary->update_dur( \%last, $epoch );
 
         if ( $task eq 'stop' )
         {
@@ -268,31 +264,19 @@ sub extract_day_tasks {
         }
         else
         {
-            $summary->{tasks}->{$task} ||= { start => $epoch, proj => $proj, dur => 0 };
+            $summary->start_task( $task, $epoch, $proj );
             @last{qw/task epoch proj/} = ( $task, $epoch, $proj );
         }
     }
 
-    return unless $summary->{dur};
+    return if $summary->is_empty;
 
     if ( $day eq 'today' and $task ne 'stop' ) {
-        _update_dur( $summary, \%last, time );
+        $summary->update_dur( \%last, time );
     }
 
     return $summary;
 }
-
-sub _update_dur {
-    my ($day_tasks, $last, $epoch) = @_;
-    my $curr_dur = $last->{epoch} ? $epoch - $last->{epoch} : 0;
-
-    $day_tasks->{tasks}->{$last->{task}}->{dur} += $curr_dur if $last->{task};
-    $day_tasks->{proj_dur}->{$last->{proj}} += $curr_dur     if $last->{proj};
-    $day_tasks->{dur} += $curr_dur;
-
-    return;
-}
-
 
 sub print_day_detail {
     my ($summary, $fh) = @_;
