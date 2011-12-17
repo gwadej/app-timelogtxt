@@ -237,8 +237,8 @@ sub extract_day_tasks {
     $day ||= 'today';
 
     my $stamp = day_stamp( $day );
-    my (%tasks, $last, $last_epoch, $last_proj, %proj_dur);
-    my ($start, $end, $task);
+    my (%tasks, $last_task, $last_epoch, $last_proj, %proj_dur);
+    my ($start, $task, $total_dur);
 
     open( my $fh, '<', $config{'logfile'} ) or die "Unable to open time log file: $!\n";
     while(<$fh>)
@@ -253,26 +253,36 @@ sub extract_day_tasks {
         my ($proj) = $task =~ /\+(\S+)/;
         my $epoch = timelocal( reverse @fields );
         $start ||= $epoch;
-        $end = $epoch;
-        $tasks{$task} ||= { start=>$epoch, proj => $proj, dur=>0 } unless $task eq 'stop';
 
-        $tasks{$last}->{dur} += $epoch - $last_epoch if $last_epoch;
-        $proj_dur{$last_proj} += $epoch - $last_epoch if $last_proj;
-        $last = $task;
-        $last_epoch = $epoch;
-        $last_proj = $proj;
+        my $curr_dur = $last_epoch ? $epoch - $last_epoch : 0;
+        $tasks{$last_task}->{dur} += $curr_dur  if $last_task;
+        $proj_dur{$last_proj} += $curr_dur if $last_proj;
+        $total_dur += $curr_dur;
+
+        if ( $task eq 'stop' )
+        {
+            $last_task = $last_epoch = $last_proj = undef;
+        }
+        else
+        {
+            $tasks{$task} ||= { start=>$epoch, proj => $proj, dur=>0 };
+            $last_task = $task;
+            $last_epoch = $epoch;
+            $last_proj = $proj;
+        }
     }
 
-    return unless $end;
+    return unless $total_dur;
 
     if ( $day eq 'today' and $task ne 'stop' ) {
         my $epoch = time;
-        $tasks{$last}->{dur} += $epoch - $last_epoch;
-        $proj_dur{$last_proj} += $epoch - $last_epoch;
-        $end = $epoch
+        my $curr_dur = $last_epoch ? $epoch - $last_epoch : 0;
+        $tasks{$last_task}->{dur} += $curr_dur  if $last_task;
+        $proj_dur{$last_proj} += $curr_dur if $last_proj;
+        $total_dur += $curr_dur;
     }
 
-    return { stamp => $stamp, start => $start, end => $end, dur => $end-$start, tasks => \%tasks, proj_dur => \%proj_dur };
+    return { stamp => $stamp, start => $start, dur => $total_dur, tasks => \%tasks, proj_dur => \%proj_dur };
 }
 
 sub print_day_detail {
