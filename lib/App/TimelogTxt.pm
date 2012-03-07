@@ -44,8 +44,13 @@ my %commands = (
     },
     'drop'    => {
         code => \&drop_event,
-        synopsis => 'drop [all]',
-        help => 'Drop top item from event stack or all if argument supplied.',
+        synopsis => 'drop [all|{n}]',
+        help => 'Drop one or more items from top of event stack or all if argument supplied.',
+    },
+    'nip'    => {
+        code => \&nip_event,
+        synopsis => 'nip',
+        help => 'Drop one item from under the top of event stack.',
     },
     'ls'      => {
         code => \&list_events,
@@ -296,14 +301,40 @@ sub pop_event {
 sub drop_event {
     my $arg = shift;
     return unless -f $config{'stackfile'};
-    if( lc $arg eq 'all' )
-    {
-        unlink $config{'stackfile'};
-    }
-    else
+    if( !defined $arg )
     {
         _pop_stack();
     }
+    elsif( lc $arg eq 'all' )
+    {
+        unlink $config{'stackfile'};
+    }
+    elsif( $arg =~ /^[0-9]+$/ )
+    {
+        _pop_stack() foreach 1..$arg;
+    }
+}
+
+sub nip_event {
+    return unless -f $config{'stackfile'};
+    _nip_stack();
+}
+
+sub _nip_stack {
+    return unless -f $config{'stackfile'};
+    open my $fh, '+<', $config{'stackfile'} or die "Unable to modify stack file: $!\n";
+    my ($prevpos, $lastpos, $lastline);
+    my ($pos, $line);
+    while( my ($line, $pos) = _readline_pos( $fh ) ) {
+        $prevpos = $lastpos if defined $lastpos;
+        ($lastpos, $lastline) = ($pos, $line);
+    }
+    return unless defined $lastline;
+    seek( $fh, $prevpos, 0 );
+    print {$fh} $lastline;
+    truncate( $fh, tell $fh );
+    chomp $lastline;
+    return $lastline;
 }
 
 sub _pop_stack {
