@@ -125,7 +125,7 @@ sub today_stamp {
 sub day_stamp {
     my ($day) = @_;
     return today_stamp() if !$day or $day eq 'today';
-    return $day if $day =~ m!^\d{4}[-/]\d{1,2}[-/]\d{1,2}$!;
+    return $day if $day =~ s!^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$!$1-$2-$3!;
     my $now = time;
     my $delta = 0;
     if( $day eq 'yesterday' ) {
@@ -274,13 +274,24 @@ sub extract_day_tasks {
         }
     }
 
-    return if $summary->is_empty;
-
     if ( $day eq 'today' and $task ne 'stop' ) {
         $summary->update_dur( \%last, time );
     }
+    else {
+        $summary->update_dur( \%last, _day_end( $stamp ) );
+    }
+
+    return if $summary->is_empty;
 
     return $summary;
+}
+
+sub _day_end {
+    my ($stamp) = @_;
+    my @date = split /-/, $stamp;
+    $date[0] -= 1900;
+    --$date[1];
+    return Time::Local::timelocal( @date, 23, 59, 59 );
 }
 
 sub push_event {
