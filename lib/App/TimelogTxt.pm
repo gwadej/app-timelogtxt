@@ -289,6 +289,7 @@ sub extract_day_tasks {
 sub _day_end {
     my ($stamp) = @_;
     my @date = split /-/, $stamp;
+    return unless @date == 3;
     $date[0] -= 1900;
     --$date[1];
     return Time::Local::timelocal( @date, 23, 59, 59 );
