@@ -135,7 +135,7 @@ sub day_stamp {
         my $wday = (localtime $now)[6];
         my $index = 0;
         foreach my $try (qw/sunday monday tuesday wednesday thursday friday saturday/) {
-            last if $try eq $day;
+            last if $try eq lc $day;
             ++$index;
         }
         return if $index > 6;
@@ -221,9 +221,9 @@ sub list_projects {
 }
 
 sub daily_report {
-    my ($day) = @_;
+    my ($day,$eday) = @_;
 
-    my $summary = extract_day_tasks( $day );
+    my $summary = extract_day_tasks( $day, $eday );
 
     $summary->print_day_detail( \*STDOUT );
     return;
@@ -239,19 +239,21 @@ sub daily_summary {
 }
 
 sub extract_day_tasks {
-    my ($day) = @_;
+    my ($day,$eday) = @_;
     $day ||= 'today';
 
     my $stamp = day_stamp( $day );
+    my $estamp = $eday ? _day_end( day_stamp( $eday ) ) : _day_end( $stamp );
     my $summary = App::TimelogTxt::Day->new( $stamp, $config{'client'} );
     my %last;
     my $task;
 
     open( my $fh, '<', $config{'logfile'} ) or die "Unable to open time log file: $!\n";
+    0 while( defined($_ = <$fh>) && (-1 == index $_, $stamp) );
     while(<$fh>)
     {
         chomp;
-        next if -1 == index $_, $stamp;
+        last if 0 == index $_, $estamp;
 
         next unless my @fields = m{^(\d+)[-/](\d+)[-/](\d+)\s(\d+):(\d+):(\d+)\s+(.*)$};
         $fields[0] -= 1900;
@@ -278,7 +280,7 @@ sub extract_day_tasks {
         $summary->update_dur( \%last, time );
     }
     else {
-        $summary->update_dur( \%last, _day_end( $stamp ) );
+        $summary->update_dur( \%last, $estamp );
     }
 
     return if $summary->is_empty;
@@ -292,7 +294,7 @@ sub _day_end {
     return unless @date == 3;
     $date[0] -= 1900;
     --$date[1];
-    return Time::Local::timelocal( @date, 23, 59, 59 );
+    return Time::Local::timelocal( 59, 59, 23, reverse @date );
 }
 
 sub push_event {
