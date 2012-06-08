@@ -299,11 +299,15 @@ sub extract_day_tasks {
         }
     }
 
-    if ( $day eq 'today' and $task ne 'stop' ) {
+    return [] unless $summary;
+
+    if ( $day eq 'today' and $task ne 'stop' )
+    {
         $summary->update_dur( \%last, time );
     }
-    else {
-        $summary->update_dur( \%last, $estamp );
+    else
+    {
+        $summary->update_dur( \%last, _stamp_to_localtime( $estamp ) );
     }
 
     return if $summary->is_empty;
@@ -311,13 +315,18 @@ sub extract_day_tasks {
     return \@summaries;
 }
 
-sub _day_end {
+sub _stamp_to_localtime {
     my ($stamp) = @_;
     my @date = split /-/, $stamp;
     return unless @date == 3;
     $date[0] -= 1900;
     --$date[1];
-    return strftime( '%Y-%m-%d', localtime( Time::Local::timelocal( 59, 59, 23, reverse @date ) + 86400) );
+    return Time::Local::timelocal( 59, 59, 23, reverse @date );
+}
+
+sub _day_end {
+    my ($stamp) = @_;
+    return strftime( '%Y-%m-%d', localtime( _stamp_to_localtime( $stamp ) + 86400) );
 }
 
 sub push_event {

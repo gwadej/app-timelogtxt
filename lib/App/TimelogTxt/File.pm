@@ -31,13 +31,13 @@ sub readline {
 
     my $line;
     if( $self->{'stage'} == 0 ) {
-        0 while( defined( $line = readline $self->{'fh'} ) && (-1 == index $line, $self->{'start'}) );
+        0 while( defined( $line = readline $self->{'fh'} ) && $line lt $self->{'start'} );
         $self->{'stage'} = 1;
         return $line;
     }
     $line = readline $self->{'fh'};
 
-    return $line if -1 == index $line, $self->{'end'};
+    return $line if $line lt $self->{'end'};
     $self->{'stage'} = 2;
     return;
 }
