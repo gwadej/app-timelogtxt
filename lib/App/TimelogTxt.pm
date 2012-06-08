@@ -10,6 +10,7 @@ use Time::Local;
 use Getopt::Long qw(:config posix_default);
 use Config::Tiny;
 use App::TimelogTxt::Day;
+use App::TimelogTxt::File;
 
 our $VERSION = '0.003';
 
@@ -223,18 +224,24 @@ sub list_projects {
 sub daily_report {
     my ($day,$eday) = @_;
 
-    my $summary = extract_day_tasks( $day, $eday );
+    my $summaries = extract_day_tasks( $day, $eday );
 
-    $summary->print_day_detail( \*STDOUT );
+    foreach my $summary (@{$summaries})
+    {
+        $summary->print_day_detail( \*STDOUT );
+    }
     return;
 }
 
 sub daily_summary {
     my ($day) = @_;
 
-    my $summary = extract_day_tasks( $day );
+    my $summaries = extract_day_tasks( $day );
 
-    $summary->print_day_summary( \*STDOUT );
+    foreach my $summary (@{$summaries})
+    {
+        $summary->print_day_summary( \*STDOUT );
+    }
     return;
 }
 
@@ -244,18 +251,34 @@ sub extract_day_tasks {
 
     my $stamp = day_stamp( $day );
     my $estamp = $eday ? _day_end( day_stamp( $eday ) ) : _day_end( $stamp );
-    my $summary = App::TimelogTxt::Day->new( $stamp, $config{'client'} );
-    my %last;
-    my $task;
+    my ($summary, %last, @summaries);
+    my $task = '';
+    my $prev_stamp = '';
 
     open( my $fh, '<', $config{'logfile'} ) or die "Unable to open time log file: $!\n";
-    0 while( defined($_ = <$fh>) && (-1 == index $_, $stamp) );
-    while(<$fh>)
+    my $file = App::TimelogTxt::File->new( $fh, $stamp, $estamp );
+
+    while( defined( $_ = $file->readline ) )
     {
         chomp;
-        last if 0 == index $_, $estamp;
 
-        next unless my @fields = m{^(\d+)[-/](\d+)[-/](\d+)\s(\d+):(\d+):(\d+)\s+(.*)$};
+        next unless my ($new_stamp, @fields) = m{^
+            (                             # the whole stamp
+                (\d+)[-/](\d+)[-/](\d+)   # date pieces
+            )
+            \s(\d+):(\d+):(\d+)           # the time pieces
+            \s+(.*)                       # the log entry
+        $}x;
+        if($prev_stamp ne $new_stamp)
+        {
+            if( $summary and $task ne 'stop' ) {
+                $summary->update_dur( \%last, $new_stamp );
+                %last = ();
+            }
+            $summary = App::TimelogTxt::Day->new( $new_stamp, $config{'client'} );
+            push @summaries, $summary;
+            $prev_stamp = $new_stamp;
+        }
         $fields[0] -= 1900;
         $fields[1] -= 1;
         $task = pop @fields;
@@ -285,7 +308,7 @@ sub extract_day_tasks {
 
     return if $summary->is_empty;
 
-    return $summary;
+    return \@summaries;
 }
 
 sub _day_end {
@@ -294,7 +317,7 @@ sub _day_end {
     return unless @date == 3;
     $date[0] -= 1900;
     --$date[1];
-    return Time::Local::timelocal( 59, 59, 23, reverse @date );
+    return strftime( '%Y-%m-%d', localtime( Time::Local::timelocal( 59, 59, 23, reverse @date ) + 86400) );
 }
 
 sub push_event {
