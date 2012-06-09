@@ -95,6 +95,16 @@ sub print_day_summary {
     return;
 }
 
+sub print_hours {
+    my ($self, $fh) = @_;
+    $fh ||= \*STDOUT;
+
+    my $proj_dur = $self->{proj_dur};
+
+    print {$fh} $self->{stamp}, ': ', _format_dur( $self->{dur} ), "\n";
+    return;
+}
+
 sub _format_dur
 {
     my ($dur) = @_;

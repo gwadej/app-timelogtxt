@@ -80,13 +80,18 @@ my %commands = (
     },
     'report'  => {
         code => \&daily_report,
-        synopsis => 'report [date]',
-        help => 'Display a report for the specified day.',
+        synopsis => 'report [date [end date]]',
+        help => 'Display a report for the specified days.',
     },
     'summary' => {
         code => \&daily_summary,
-        synopsis => 'summary [date]',
-        help => q{Display a summary of the appropriate day's projects.},
+        synopsis => 'summary [date [end date]]',
+        help => q{Display a summary of the appropriate days' projects.},
+    },
+    'hours' => {
+        code => \&report_hours,
+        synopsis => 'hours [date [end date]]',
+        help => q{Display the hours worked for each of the appropriate days.},
     },
 );
 
@@ -234,13 +239,25 @@ sub daily_report {
 }
 
 sub daily_summary {
-    my ($day) = @_;
+    my ($day, $eday) = @_;
 
-    my $summaries = extract_day_tasks( $day );
+    my $summaries = extract_day_tasks( $day, $eday );
 
     foreach my $summary (@{$summaries})
     {
         $summary->print_day_summary( \*STDOUT );
+    }
+    return;
+}
+
+sub report_hours {
+    my ($day, $eday) = @_;
+
+    my $summaries = extract_day_tasks( $day, $eday );
+
+    foreach my $summary (@{$summaries})
+    {
+        $summary->print_hours( \*STDOUT );
     }
     return;
 }
