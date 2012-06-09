@@ -17,7 +17,9 @@ sub new {
     my $obj = {
         fh => $fh,
         start => $start,
+        startlen => length $start,
         end => $end,
+        endlen => length $end,
         stage => 0,
     };
 
@@ -30,14 +32,17 @@ sub readline {
     return if $self->{'stage'} > 1 or eof( $self->{'fh'} );
 
     my $line;
-    if( $self->{'stage'} == 0 ) {
-        0 while( defined( $line = readline $self->{'fh'} ) && $line lt $self->{'start'} );
+    if( $self->{'stage'} == 0 )
+    {
+        0 while( defined( $line = readline $self->{'fh'} ) && substr( $line, 0, $self->{'startlen'} ) lt $self->{'start'} );
         $self->{'stage'} = 1;
-        return $line;
     }
-    $line = readline $self->{'fh'};
+    else
+    {
+        $line = readline $self->{'fh'};
+    }
 
-    return $line if $line lt $self->{'end'};
+    return $line if substr( $line, 0, $self->{'endlen'} ) lt $self->{'end'};
     $self->{'stage'} = 2;
     return;
 }
