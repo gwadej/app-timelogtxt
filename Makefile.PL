@@ -10,6 +10,8 @@ WriteMakefile(
     PL_FILES            => {},
     PREREQ_PM => {
         'Test::More' => 0,
+        'Test::NoWarnings' => 0,
+        'Test::Exception' => 0,
         'POSIX'    => 0,
         'Time::Local' => 0,
         'Getopt::Long' => 0,
