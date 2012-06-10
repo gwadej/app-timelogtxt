@@ -122,6 +122,7 @@ sub run {
         print "Unrecognized command '$cmd'\n\n";
         usage();
     }
+    return;
 }
 
 sub today_stamp {
@@ -131,7 +132,12 @@ sub today_stamp {
 sub day_stamp {
     my ($day) = @_;
     return today_stamp() if !$day or $day eq 'today';
+
+    # Parse the string to generate a reasonable guess for the day.
     return $day if $day =~ s!^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$!$1-$2-$3!;
+
+    return unless grep { $day eq $_ } qw/yesterday sunday monday tuesday wednesday thursday friday saturday/;
+
     my $now = time;
     my $delta = 0;
     if( $day eq 'yesterday' ) {
@@ -148,8 +154,7 @@ sub day_stamp {
         $delta = $wday - $index;
         $delta+=7 if $delta < 1;
     }
-    return strftime( '%Y-%m-%d', localtime $now-86400*$delta ) if $delta;
-    # Parse the string to generate a reasonable guess for the day.
+    return strftime( '%Y-%m-%d', localtime $now-86400*$delta );
 }
 
 sub log_event {
@@ -199,6 +204,7 @@ or a day name: yesterday, today, or sunday .. saturday.\n";
             print "$c\t: $config{'alias'}->{$c}\n";
         }
     }
+    return;
 }
 
 sub list_events {
@@ -352,6 +358,7 @@ sub push_event {
         print {$fh} _get_last_event(), "\n";
     }
     log_event( @_ );
+    return;
 }
 
 sub pop_event {
@@ -359,6 +366,7 @@ sub pop_event {
     my $event = _pop_stack();
     die "Event stack is empty.\n" unless $event;
     log_event( $event );
+    return;
 }
 
 sub drop_event {
@@ -376,11 +384,13 @@ sub drop_event {
     {
         _pop_stack() foreach 1..$arg;
     }
+    return;
 }
 
 sub nip_event {
     return unless -f $config{'stackfile'};
     _nip_stack();
+    return;
 }
 
 sub _nip_stack {

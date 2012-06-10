@@ -7,7 +7,9 @@ our $VERSION = '0.03';
 
 sub new {
     my ($class, $stamp) = @_;
-    bless {
+    die "Missing required stamp.\n" unless $stamp;
+
+    return bless {
         stamp => $stamp,
         start => undef,
         dur => 0,
@@ -43,10 +45,10 @@ sub start_task {
 }
 
 sub print_day_detail {
-    my ($self, $fh, $client) = @_;
+    my ($self, $fh) = @_;
     $fh ||= \*STDOUT;
 
-    my ($tasks, $proj_dur) = @$self{ qw/tasks proj_dur/ };
+    my ($tasks, $proj_dur) = @{$self}{ qw/tasks proj_dur/ };
     my $last_proj = '';
 
     print {$fh} "\n$self->{stamp} ", _format_dur( $self->{dur} ), "\n";
