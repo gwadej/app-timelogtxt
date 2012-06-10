@@ -2,17 +2,13 @@ package App::TimelogTxt::Day;
 
 use warnings;
 use strict;
-use 5.010;
 
-use Carp;
-
-our $VERSION = '0.0.3';
+our $VERSION = '0.03';
 
 sub new {
-    my ($class, $stamp, $client) = @_;
+    my ($class, $stamp) = @_;
     bless {
         stamp => $stamp,
-        client => $client,
         start => undef,
         dur => 0,
         tasks => {},
@@ -53,8 +49,7 @@ sub print_day_detail {
     my ($tasks, $proj_dur) = @$self{ qw/tasks proj_dur/ };
     my $last_proj = '';
 
-    print {$fh} "\n$self->{stamp}\n";
-    print {$fh} " $self->{client} ", _format_dur( $self->{dur} ), "\n";
+    print {$fh} "\n$self->{stamp} ", _format_dur( $self->{dur} ), "\n";
     foreach my $t ( sort { ($tasks->{$a}->{proj} cmp $tasks->{$b}->{proj}) || ($tasks->{$b}->{start} <=> $tasks->{$a}->{start}) }  keys %{$tasks} )
     {
         if( $tasks->{$t}->{proj} ne $last_proj )
@@ -86,8 +81,7 @@ sub print_day_summary {
 
     my $proj_dur = $self->{proj_dur};
 
-    print {$fh} "$self->{stamp}\n";
-    print {$fh} " $self->{client} ", _format_dur( $self->{dur} ), "\n";
+    print {$fh} "$self->{stamp} ", _format_dur( $self->{dur} ), "\n";
     foreach my $p ( sort keys %{$proj_dur} )
     {
         printf {$fh} '  %-13s%s',  $p, _format_dur( $proj_dur->{$p} ). "\n";

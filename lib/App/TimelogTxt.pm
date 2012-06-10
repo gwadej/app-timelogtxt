@@ -292,7 +292,7 @@ sub extract_day_tasks {
                 $summary->update_dur( \%last, $new_stamp );
                 %last = ();
             }
-            $summary = App::TimelogTxt::Day->new( $new_stamp, $config{'client'} );
+            $summary = App::TimelogTxt::Day->new( $new_stamp );
             push @summaries, $summary;
             $prev_stamp = $new_stamp;
         }
