@@ -18,7 +18,7 @@ throws_ok { App::TimelogTxt::Day->new } qr/Missing/, 'Bad new';
     isa_ok( $day, 'App::TimelogTxt::Day', '$day' );
 
     ok( $day->is_empty, "$label: empty before any items" );
-    
+
     my $buffer = '';
     open my $fh, '>>', \$buffer or die "Unable to make file handle: $!\n";
     $day->print_day_detail( $fh );
