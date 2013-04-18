@@ -69,7 +69,7 @@ This document describes App::TimelogTxt::File version 0.03
     while( defined( $line = $file->readline ) ) {
         # process lines
     }
-  
+
 =head1 DESCRIPTION
 
 An object of this class is a filtered iterator over the lines in the file.
@@ -77,7 +77,7 @@ Only the lines between the first instance of the first marker (inclusive)
 and the first instance of the second marker (exclusive) are returned by
 the readline function.
 
-=head1 INTERFACE 
+=head1 INTERFACE
 
 =head2 new( $file, $start, $end )
 
