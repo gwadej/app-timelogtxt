@@ -17,87 +17,88 @@ our $VERSION = '0.003';
 my %config = (
     editor => '',
     client => '',
-    dir => '',
+    dir    => '',
     defcmd => '',
 );
 my $config_file = "$ENV{HOME}/.timelogrc";
 
 my %commands = (
-    'start'   => {
-        code => \&log_event,
+    'start' => {
+        code     => \&log_event,
         synopsis => 'start {event description}',
-        help => 'Stop last event and start timing a new event.',
+        help     => 'Stop last event and start timing a new event.',
     },
-    'stop'    => {
-        code => sub { log_event( 'stop' ); },
+    'stop' => {
+        code     => sub { log_event( 'stop' ); },
         synopsis => 'stop',
-        help => 'Stop timing last event.',
+        help     => 'Stop timing last event.',
     },
-    'push'    => {
-        code => \&push_event,
+    'push' => {
+        code     => \&push_event,
         synopsis => 'push {event description}',
-        help => 'Save last event on stack and start timing new event.',
+        help     => 'Save last event on stack and start timing new event.',
     },
-    'pop'     => {
-        code => \&pop_event,
+    'pop' => {
+        code     => \&pop_event,
         synopsis => 'pop',
-        help => 'Stop last event and restart top event on stack.',
+        help     => 'Stop last event and restart top event on stack.',
     },
-    'drop'    => {
-        code => \&drop_event,
+    'drop' => {
+        code     => \&drop_event,
         synopsis => 'drop [all|{n}]',
-        help => 'Drop one or more items from top of event stack or all if argument supplied.',
+        help     => 'Drop one or more items from top of event stack or all if argument supplied.',
     },
-    'nip'    => {
-        code => \&nip_event,
+    'nip' => {
+        code     => \&nip_event,
         synopsis => 'nip',
-        help => 'Drop one item from under the top of event stack.',
+        help     => 'Drop one item from under the top of event stack.',
     },
-    'ls'      => {
-        code => \&list_events,
+    'ls' => {
+        code     => \&list_events,
         synopsis => 'ls [date]',
-        help => 'List events for the specified day. Default to today.',
+        help     => 'List events for the specified day. Default to today.',
     },
-    'lsproj'  => {
-        code => \&list_projects,
+    'lsproj' => {
+        code     => \&list_projects,
         synopsis => 'lsproj',
-        help => 'List known projects.',
+        help     => 'List known projects.',
     },
-    'lstk'    => {
-        code => \&list_stack,
+    'lstk' => {
+        code     => \&list_stack,
         synopsis => 'lstk',
-        help => 'Display items on the stack.',
+        help     => 'Display items on the stack.',
     },
-    'edit'    => {
-        code => sub { system $config{'editor'}, $config{'logfile'}; },
+    'edit' => {
+        code     => sub { system $config{'editor'}, $config{'logfile'}; },
         synopsis => 'edit',
         help => 'Open the timelog file in the current editor',
     },
-    'help'    => {
-        code => \&usage,
+    'help' => {
+        code     => \&usage,
         synopsis => 'help [commands|aliases]',
-        help => 'A list of commands and/or aliases. Limit display with the argument.',
+        help     => 'A list of commands and/or aliases. Limit display with the argument.',
     },
-    'report'  => {
-        code => \&daily_report,
+    'report' => {
+        code     => \&daily_report,
         synopsis => 'report [date [end date]]',
-        help => 'Display a report for the specified days.',
+        help     => 'Display a report for the specified days.',
     },
     'summary' => {
-        code => \&daily_summary,
+        code     => \&daily_summary,
         synopsis => 'summary [date [end date]]',
-        help => q{Display a summary of the appropriate days' projects.},
+        help     => q{Display a summary of the appropriate days' projects.},
     },
     'hours' => {
-        code => \&report_hours,
+        code     => \&report_hours,
         synopsis => 'hours [date [end date]]',
-        help => q{Display the hours worked for each of the appropriate days.},
+        help     => q{Display the hours worked for each of the appropriate days.},
     },
 );
 
-sub run {
+sub run
+{
     GetOptions(
-        "dir=s" => \$config{'dir'},
+        "dir=s"    => \$config{'dir'},
         "client=s" => \$config{'client'},
         "editor=s" => \$config{'editor'},
         "conf=s"   => \$config_file,
@@ -106,100 +107,122 @@ sub run {
     %config = initialize_configuration( $config_file );
 
     # Handle default command if none specified
-    @ARGV = split / /, ($config{'defcmd'}||'stop') unless @ARGV;
+    @ARGV = split / /, ( $config{'defcmd'} || 'stop' ) unless @ARGV;
 
     # Handle alias if one is supplied
     my $cmd = shift @ARGV;
-    if( exists $config{'alias'}->{$cmd} ) {
-        ($cmd, @ARGV) = ((split / /, $config{'alias'}->{$cmd}), @ARGV);
+    if( exists $config{'alias'}->{$cmd} )
+    {
+        ( $cmd, @ARGV ) = ( ( split / /, $config{'alias'}->{$cmd} ), @ARGV );
     }
 
     # Handle builtin commands
-    if ( exists $commands{$cmd} ) {
+    if( exists $commands{$cmd} )
+    {
         $commands{$cmd}->{'code'}->( @ARGV );
     }
-    else {
+    else
+    {
         print "Unrecognized command '$cmd'\n\n";
         usage();
     }
     return;
 }
 
-sub today_stamp {
+sub today_stamp
+{
     return strftime( '%Y-%m-%d', localtime time );
 }
 
-sub day_stamp {
-    my ($day) = @_;
+sub day_stamp
+{
+    my ( $day ) = @_;
     return today_stamp() if !$day or $day eq 'today';
 
     # Parse the string to generate a reasonable guess for the day.
     return $day if $day =~ s!^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$!$1-$2-$3!;
 
-    return unless grep { $day eq $_ } qw/yesterday sunday monday tuesday wednesday thursday friday saturday/;
+    $day = lc $day;
+    return
+        unless grep { $day eq $_ }
+            qw/yesterday sunday monday tuesday wednesday thursday friday saturday/;
 
-    my $now = time;
+    my $now   = time;
     my $delta = 0;
-    if( $day eq 'yesterday' ) {
+    if( $day eq 'yesterday' )
+    {
         $delta = 1;
     }
-    else {
-        my $wday = (localtime $now)[6];
+    else
+    {
+        my $wday  = ( localtime $now )[6];
         my $index = 0;
-        foreach my $try (qw/sunday monday tuesday wednesday thursday friday saturday/) {
+        foreach my $try ( qw/sunday monday tuesday wednesday thursday friday saturday/ )
+        {
             last if $try eq lc $day;
             ++$index;
         }
         return if $index > 6;
         $delta = $wday - $index;
-        $delta+=7 if $delta < 1;
+        $delta += 7 if $delta < 1;
     }
-    return strftime( '%Y-%m-%d', localtime $now-86400*$delta );
+    return strftime( '%Y-%m-%d', localtime $now - 86400 * $delta );
 }
 
-sub log_event {
+sub log_event
+{
     open my $fh, '>>', $config{'logfile'} or die "Cannot open timelog ($config{'logfile'}): $!\n";
     print {$fh} strftime( '%Y-%m-%d %T', localtime time ), " @_\n";
     return;
 }
 
-sub initialize_configuration {
-    my ($config_file) = @_;
+sub initialize_configuration
+{
+    my ( $config_file ) = @_;
     my $conf = -f $config_file ? Config::Tiny->read( $config_file ) : {};
 
-    delete @config{grep { !$config{$_} } keys %config};
+    delete @config{ grep { !$config{$_} } keys %config };
     %config = (
         editor => $ENV{'VISUAL'} || $ENV{'EDITOR'} || '/usr/bin/vim',
         client => 'cPanel',
-        dir => "$ENV{HOME}/timelog",
+        dir    => "$ENV{HOME}/timelog",
         defcmd => 'stop',
-        ($conf->{_} ? %{$conf->{_}} : ()),
-        ($conf->{'alias'} ? ('alias'=>$conf->{'alias'}) : ()),
+        ( $conf->{_} ? %{ $conf->{_} } : () ),
+        ( $conf->{'alias'} ? ( 'alias' => $conf->{'alias'} ) : () ),
         %config
     );
     $config{'dir'} =~ s/~/$ENV{HOME}/;
-    foreach my $d (([qw/logfile timelog.txt/], [qw/stackfile stack.txt/], [qw/reportfile report.txt/], [qw/archive archive.txt/])) {
-        $config{$d->[0]} = "$config{'dir'}/$d->[1]";
-        $config{$d->[0]} =~ s/~/$ENV{HOME}/;
+    foreach my $d (
+        (
+            [qw/logfile timelog.txt/],   [qw/stackfile stack.txt/],
+            [qw/reportfile report.txt/], [qw/archive archive.txt/]
+        )
+        )
+    {
+        $config{ $d->[0] } = "$config{'dir'}/$d->[1]";
+        $config{ $d->[0] } =~ s/~/$ENV{HOME}/;
     }
     return %config;
 }
 
-
-sub usage {
-    my ($arg) = @_;
-    if( !$arg or $arg eq 'commands' ) {
+sub usage
+{
+    my ( $arg ) = @_;
+    if( !$arg or $arg eq 'commands' )
+    {
         print "\nCommands:\n";
-        foreach my $c (sort keys %commands) {
+        foreach my $c ( sort keys %commands )
+        {
             my $d = $commands{$c};
             print "$d->{synopsis}\n        $d->{help}\n";
         }
         print "\nwhere [date] is an optional string specifying a date of the form YYYY-MM-DD
 or a day name: yesterday, today, or sunday .. saturday.\n";
     }
-    if( !$arg or $arg eq 'aliases' ) {
+    if( !$arg or $arg eq 'aliases' )
+    {
         print "\nAliases:\n";
-        foreach my $c ( sort keys %{$config{'alias'}} )
+        foreach my $c ( sort keys %{ $config{'alias'} } )
         {
             print "$c\t: $config{'alias'}->{$c}\n";
         }
@@ -207,94 +230,110 @@ or a day name: yesterday, today, or sunday .. saturday.\n";
     return;
 }
 
-sub list_events {
-    my ($day) = @_;
-    $day ||= 'today';
-    my $stamp = day_stamp( $day );
+sub _open_logfile
+{
+    open my $fh, '<', $config{'logfile'} or die "Cannot open timelog ($config{'logfile'}): $!\n";
+    return $fh;
+}
 
-    open( my $fh, '<', $config{'logfile'} ) or die "Unable to open time log file: $!\n";
-    while(<$fh>)
-    {
-        print if 0 == index $_, $stamp;
-    }
+sub _each_logline
+{
+    my ($code) = @_;
+    my $fh = _open_logfile();
+    $code->() while( <$fh> );
     return;
 }
 
-sub list_projects {
-    open( my $fh, '<', $config{'logfile'} ) or die "Unable to open time log file: $!\n";
+sub list_events
+{
+    my ( $day ) = @_;
+    $day ||= 'today';
+    my $stamp = day_stamp( $day );
+
+    _each_logline( sub { print if 0 == index $_, $stamp; } );
+    return;
+}
+
+sub list_projects
+{
     my %projects;
-    while(<$fh>)
-    {
-        my (@projs) = m/\+(\S+)/g;
-        @projects{@projs} = (1) x @projs if @projs;
-    }
+    _each_logline( sub {
+        my ( @projs ) = m/\+(\S+)/g;
+        @projects{@projs} = ( 1 ) x @projs if @projs;
+    } );
     print "$_\n" foreach sort keys %projects;
     return;
 }
 
-sub daily_report {
-    my ($day,$eday) = @_;
+sub daily_report
+{
+    my ( $day, $eday ) = @_;
 
     my $summaries = extract_day_tasks( $day, $eday );
 
-    foreach my $summary (@{$summaries})
+    foreach my $summary ( @{$summaries} )
     {
         $summary->print_day_detail( \*STDOUT );
     }
     return;
 }
 
-sub daily_summary {
-    my ($day, $eday) = @_;
+sub daily_summary
+{
+    my ( $day, $eday ) = @_;
 
     my $summaries = extract_day_tasks( $day, $eday );
 
-    foreach my $summary (@{$summaries})
+    foreach my $summary ( @{$summaries} )
     {
         $summary->print_day_summary( \*STDOUT );
     }
     return;
 }
 
-sub report_hours {
-    my ($day, $eday) = @_;
+sub report_hours
+{
+    my ( $day, $eday ) = @_;
 
     my $summaries = extract_day_tasks( $day, $eday );
 
-    foreach my $summary (@{$summaries})
+    foreach my $summary ( @{$summaries} )
     {
         $summary->print_hours( \*STDOUT );
     }
     return;
 }
 
-sub extract_day_tasks {
-    my ($day,$eday) = @_;
+sub extract_day_tasks
+{
+    my ( $day, $eday ) = @_;
     $day ||= 'today';
 
     my $stamp = day_stamp( $day );
+    die "No day provided.\n" unless defined $stamp;
     my $estamp = $eday ? _day_end( day_stamp( $eday ) ) : _day_end( $stamp );
-    my ($summary, %last, @summaries);
-    my $task = '';
+    my ( $summary, %last, @summaries );
+    my $task       = '';
     my $prev_stamp = '';
 
-    open( my $fh, '<', $config{'logfile'} ) or die "Unable to open time log file: $!\n";
+    my $fh = _open_logfile();
     my $file = App::TimelogTxt::File->new( $fh, $stamp, $estamp );
 
     while( defined( $_ = $file->readline ) )
     {
         chomp;
 
-        next unless my ($new_stamp, @fields) = m{^
+        next unless my ( $new_stamp, @fields ) = m{^
             (                             # the whole stamp
                 (\d+)[-/](\d+)[-/](\d+)   # date pieces
             )
             \s(\d+):(\d+):(\d+)           # the time pieces
             \s+(.*)                       # the log entry
         $}x;
-        if($prev_stamp ne $new_stamp)
+        if( $prev_stamp ne $new_stamp )
         {
-            if( $summary and $task ne 'stop' ) {
+            if( $summary and $task ne 'stop' )
+            {
                 $summary->update_dur( \%last, $new_stamp );
                 %last = ();
             }
@@ -305,13 +344,13 @@ sub extract_day_tasks {
         $fields[0] -= 1900;
         $fields[1] -= 1;
         $task = pop @fields;
-        my ($proj) = $task =~ /\+(\S+)/;
+        my ( $proj ) = $task =~ /\+(\S+)/;
         my $epoch = timelocal( reverse @fields );
         $summary->set_start( $epoch );
 
         $summary->update_dur( \%last, $epoch );
 
-        if ( $task eq 'stop' )
+        if( $task eq 'stop' )
         {
             %last = ();
         }
@@ -324,7 +363,7 @@ sub extract_day_tasks {
 
     return [] unless $summary;
 
-    if ( $day eq 'today' and $task ne 'stop' )
+    if( $day eq 'today' and $task ne 'stop' )
     {
         $summary->update_dur( \%last, time );
     }
@@ -338,8 +377,9 @@ sub extract_day_tasks {
     return \@summaries;
 }
 
-sub _stamp_to_localtime {
-    my ($stamp) = @_;
+sub _stamp_to_localtime
+{
+    my ( $stamp ) = @_;
     my @date = split /-/, $stamp;
     return unless @date == 3;
     $date[0] -= 1900;
@@ -347,12 +387,14 @@ sub _stamp_to_localtime {
     return Time::Local::timelocal( 59, 59, 23, reverse @date );
 }
 
-sub _day_end {
-    my ($stamp) = @_;
-    return strftime( '%Y-%m-%d', localtime( _stamp_to_localtime( $stamp ) + 86400) );
+sub _day_end
+{
+    my ( $stamp ) = @_;
+    return strftime( '%Y-%m-%d', localtime( _stamp_to_localtime( $stamp ) + 86400 ) );
 }
 
-sub push_event {
+sub push_event
+{
     {
         open my $fh, '>>', $config{'stackfile'} or die "Unable to write to stack file: $!\n";
         print {$fh} _get_last_event(), "\n";
@@ -361,7 +403,8 @@ sub push_event {
     return;
 }
 
-sub pop_event {
+sub pop_event
+{
     return unless -f $config{'stackfile'};
     my $event = _pop_stack();
     die "Event stack is empty.\n" unless $event;
@@ -369,7 +412,8 @@ sub pop_event {
     return;
 }
 
-sub drop_event {
+sub drop_event
+{
     my $arg = shift;
     return unless -f $config{'stackfile'};
     if( !defined $arg )
@@ -382,25 +426,28 @@ sub drop_event {
     }
     elsif( $arg =~ /^[0-9]+$/ )
     {
-        _pop_stack() foreach 1..$arg;
+        _pop_stack() foreach 1 .. $arg;
     }
     return;
 }
 
-sub nip_event {
+sub nip_event
+{
     return unless -f $config{'stackfile'};
     _nip_stack();
     return;
 }
 
-sub _nip_stack {
+sub _nip_stack
+{
     return unless -f $config{'stackfile'};
     open my $fh, '+<', $config{'stackfile'} or die "Unable to modify stack file: $!\n";
-    my ($prevpos, $lastpos, $lastline);
-    my ($pos, $line);
-    while( my ($line, $pos) = _readline_pos( $fh ) ) {
+    my ( $prevpos, $lastpos, $lastline );
+    my ( $pos, $line );
+    while( my ( $line, $pos ) = _readline_pos( $fh ) )
+    {
         $prevpos = $lastpos if defined $lastpos;
-        ($lastpos, $lastline) = ($pos, $line);
+        ( $lastpos, $lastline ) = ( $pos, $line );
     }
     return unless defined $lastline;
     seek( $fh, $prevpos, 0 );
@@ -410,13 +457,15 @@ sub _nip_stack {
     return $lastline;
 }
 
-sub _pop_stack {
+sub _pop_stack
+{
     return unless -f $config{'stackfile'};
     open my $fh, '+<', $config{'stackfile'} or die "Unable to modify stack file: $!\n";
-    my ($lastpos, $lastline);
-    my ($pos, $line);
-    while( my ($line, $pos) = _readline_pos( $fh ) ) {
-        ($lastpos, $lastline) = ($pos, $line);
+    my ( $lastpos, $lastline );
+    my ( $pos,     $line );
+    while( my ( $line, $pos ) = _readline_pos( $fh ) )
+    {
+        ( $lastpos, $lastline ) = ( $pos, $line );
     }
     return unless defined $lastline;
     seek( $fh, $lastpos, 0 );
@@ -425,7 +474,8 @@ sub _pop_stack {
     return $lastline;
 }
 
-sub list_stack {
+sub list_stack
+{
     return unless -f $config{'stackfile'};
     open my $fh, '<', $config{'stackfile'} or die "Unable to read stack file: $!\n";
     my @lines = <$fh>;
@@ -434,20 +484,21 @@ sub list_stack {
     return;
 }
 
-sub _readline_pos {
-    my $fh = shift;
-    my $pos = tell $fh;
+sub _readline_pos
+{
+    my $fh   = shift;
+    my $pos  = tell $fh;
     my $line = <$fh>;
-    return ($line, $pos) if defined $line;
+    return ( $line, $pos ) if defined $line;
     return;
 }
 
-sub _get_last_event {
-    open( my $fh, '<', $config{'logfile'} ) or die "Unable to open time log file: $!\n";
+sub _get_last_event
+{
     my $event_line;
-    $event_line = $_ while <$fh>;
+    _each_logline( sub { $event_line = $_; } );
     chomp $event_line;
-    $event_line =~  s{^(\d+)[-/](\d+)[-/](\d+)\s(\d+):(\d+):(\d+)\s+}{}; # strip timestamp
+    $event_line =~ s{^(\d+)[-/](\d+)[-/](\d+)\s(\d+):(\d+):(\d+)\s+}{};    # strip timestamp
 
     return $event_line;
 }
@@ -457,7 +508,7 @@ __END__
 
 =head1 NAME
 
-App::TimelogTxt - [One line description of module's purpose here]
+App::TimelogTxt - Core code for timelog utility.
 
 
 =head1 VERSION
