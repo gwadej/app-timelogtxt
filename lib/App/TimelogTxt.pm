@@ -17,7 +17,6 @@ our $VERSION = '0.003';
 
 my %config = (
     editor => '',
-    client => '',
     dir    => '',
     defcmd => '',
 );
@@ -31,7 +30,7 @@ my %commands = (
         help     => 'Stop last event and start timing a new event.',
     },
     'stop' => {
-        code     => sub { log_event( 'stop' ); },
+        code     => sub { my $app = shift; log_event( $app, 'stop' ); },
         clue     => 'stop',
         abstract => 'Stop timing last event.',
         help     => 'Stop timing last event.',
@@ -80,7 +79,7 @@ if argument supplied.',
         help     => 'Display items on the stack.',
     },
     'edit' => {
-        code     => sub { system $config{'editor'}, $config{'logfile'}; },
+        code     => \&edit_logfile,
         clue     => 'edit',
         abstract => 'Edit the timelog file.',
         help => 'Open the timelog file in the current editor',
@@ -109,14 +108,12 @@ sub run
 {
     GetOptions(
         "dir=s"    => \$config{'dir'},
-        "client=s" => \$config{'client'},
         "editor=s" => \$config{'editor'},
         "conf=s"   => \$config_file,
     );
 
-    %config = initialize_configuration( $config_file );
     my $options = {
-        config_file      => $config_file,
+        config           => $config_file,
         default_commands => 'help shell',
         'help:post_hint' =>
             "\nwhere [date] is an optional string specifying a date of the form YYYY-MM-DD
@@ -126,9 +123,10 @@ or a day name: yesterday, today, or sunday .. saturday.\n",
 or a day name: yesterday, today, or sunday .. saturday.\n",
     };
     my $app = App::CmdDispatch->new( \%commands, $options );
+    initialize_configuration( $app->get_config() );
 
     # Handle default command if none specified
-    @ARGV = split / /, ( $config{'defcmd'} || 'stop' ) unless @ARGV;
+    @ARGV = split / /, ( $app->get_config()->{'defcmd'} || 'stop' ) unless @ARGV;
 
     $app->run( @ARGV );
 
@@ -177,50 +175,48 @@ sub day_stamp
 
 sub log_event
 {
-    open my $fh, '>>', $config{'logfile'} or die "Cannot open timelog ($config{'logfile'}): $!\n";
+    my $app = shift;
+    my $config = $app->get_config();
+    open my $fh, '>>', $config->{'logfile'} or die "Cannot open timelog ($config->{'logfile'}): $!\n";
     print {$fh} strftime( '%Y-%m-%d %T', localtime time ), " @_\n";
+    return;
+}
+
+sub edit_logfile
+{
+    my ( $app ) = @_;
+    my $config = $app->get_config();
+    system $config->{editor}, $config->{logfile};
     return;
 }
 
 sub initialize_configuration
 {
-    my ( $config_file ) = @_;
-    my $conf = -f $config_file ? Config::Tiny->read( $config_file ) : {};
+    my ( $config ) = @_;
 
-    delete @config{ grep { !$config{$_} } keys %config };
-    %config = (
-        editor => $ENV{'VISUAL'} || $ENV{'EDITOR'} || '/usr/bin/vim',
-        client => 'cPanel',
-        dir    => "$ENV{HOME}/timelog",
-        defcmd => 'stop',
-        ( $conf->{_} ? %{ $conf->{_} } : () ),
-        ( $conf->{'alias'} ? ( 'alias' => $conf->{'alias'} ) : () ),
-        %config
-    );
-    $config{'dir'} =~ s/~/$ENV{HOME}/;
-    foreach my $d (
-        (
-            [qw/logfile timelog.txt/],   [qw/stackfile stack.txt/],
-            [qw/reportfile report.txt/], [qw/archive archive.txt/]
-        )
-        )
+    $config->{editor} ||= $config{editor} || $ENV{'VISUAL'} || $ENV{'EDITOR'} || '/usr/bin/vim';
+    $config->{dir}    ||= $config{dir} || "$ENV{HOME}/timelog";
+    $config->{defcmd} ||= $config{defcmd} || 'stop';
+    $config->{'dir'} =~ s/~/$ENV{HOME}/;
+    foreach my $d ( [qw/logfile timelog.txt/], [qw/stackfile stack.txt/] )
     {
-        $config{ $d->[0] } = "$config{'dir'}/$d->[1]";
-        $config{ $d->[0] } =~ s/~/$ENV{HOME}/;
+        $config->{ $d->[0] } = "$config->{'dir'}/$d->[1]";
+        $config->{ $d->[0] } =~ s/~/$ENV{HOME}/;
     }
-    return %config;
+    return;
 }
 
 sub _open_logfile
 {
-    open my $fh, '<', $config{'logfile'} or die "Cannot open timelog ($config{'logfile'}): $!\n";
+    my $config = (shift)->get_config();
+    open my $fh, '<', $config->{'logfile'} or die "Cannot open timelog ($config->{'logfile'}): $!\n";
     return $fh;
 }
 
 sub _each_logline
 {
-    my ( $code ) = @_;
-    my $fh = _open_logfile();
+    my ( $app, $code ) = @_;
+    my $fh = _open_logfile( $app );
     $code->() while( <$fh> );
     return;
 }
@@ -231,7 +227,7 @@ sub list_events
     $day ||= 'today';
     my $stamp = day_stamp( $day );
 
-    _each_logline( sub { print if 0 == index $_, $stamp; } );
+    _each_logline( $app, sub { print if 0 == index $_, $stamp; } );
     return;
 }
 
@@ -240,6 +236,7 @@ sub list_projects
     my ( $app ) = @_;
     my %projects;
     _each_logline(
+        $app,
         sub {
             my ( @projs ) = m/\+(\S+)/g;
             @projects{@projs} = ( 1 ) x @projs if @projs;
@@ -253,7 +250,7 @@ sub daily_report
 {
     my ( $app, $day, $eday ) = @_;
 
-    my $summaries = extract_day_tasks( $day, $eday );
+    my $summaries = extract_day_tasks( $app, $day, $eday );
 
     foreach my $summary ( @{$summaries} )
     {
@@ -266,7 +263,7 @@ sub daily_summary
 {
     my ( $app, $day, $eday ) = @_;
 
-    my $summaries = extract_day_tasks( $day, $eday );
+    my $summaries = extract_day_tasks( $app, $day, $eday );
 
     foreach my $summary ( @{$summaries} )
     {
@@ -279,7 +276,7 @@ sub report_hours
 {
     my ( $app, $day, $eday ) = @_;
 
-    my $summaries = extract_day_tasks( $day, $eday );
+    my $summaries = extract_day_tasks( $app, $day, $eday );
 
     foreach my $summary ( @{$summaries} )
     {
@@ -290,7 +287,7 @@ sub report_hours
 
 sub extract_day_tasks
 {
-    my ( $day, $eday ) = @_;
+    my ( $app, $day, $eday ) = @_;
     $day ||= 'today';
 
     my $stamp = day_stamp( $day );
@@ -300,7 +297,7 @@ sub extract_day_tasks
     my $task       = '';
     my $prev_stamp = '';
 
-    my $fh = _open_logfile();
+    my $fh = _open_logfile( $app );
     my $file = App::TimelogTxt::File->new( $fh, $stamp, $estamp );
 
     while( defined( $_ = $file->readline ) )
@@ -380,7 +377,7 @@ sub _day_end
 sub start_event
 {
     my ( $app, @event ) = @_;
-    log_event( @event );
+    log_event( $app, @event );
     return;
 }
 
@@ -388,54 +385,57 @@ sub push_event
 {
     my ( $app, @event ) = @_;
     {
-        open my $fh, '>>', $config{'stackfile'} or die "Unable to write to stack file: $!\n";
-        print {$fh} _get_last_event(), "\n";
+        open my $fh, '>>', $app->get_config()->{'stackfile'} or die "Unable to write to stack file: $!\n";
+        print {$fh} _get_last_event( $app ), "\n";
     }
-    log_event( @event );
+    log_event( $app, @event );
     return;
 }
 
 sub pop_event
 {
     my ( $app ) = @_;
-    return unless -f $config{'stackfile'};
-    my $event = _pop_stack();
+    return unless -f $app->get_config()->{'stackfile'};
+    my $event = _pop_stack( $app );
     die "Event stack is empty.\n" unless $event;
-    log_event( $event );
+    log_event( $app, $event );
     return;
 }
 
 sub drop_event
 {
     my ( $app, $arg ) = @_;
-    return unless -f $config{'stackfile'};
+    my $config = $app->get_config();
+    return unless -f $config->{'stackfile'};
     if( !defined $arg )
     {
-        _pop_stack();
+        _pop_stack( $app );
     }
     elsif( lc $arg eq 'all' )
     {
-        unlink $config{'stackfile'};
+        unlink $config->{'stackfile'};
     }
     elsif( $arg =~ /^[0-9]+$/ )
     {
-        _pop_stack() foreach 1 .. $arg;
+        _pop_stack( $app ) foreach 1 .. $arg;
     }
     return;
 }
 
 sub nip_event
 {
-    my ( $app ) = @_;
-    return unless -f $config{'stackfile'};
-    _nip_stack();
+    my $app = shift;
+    my $config = $app->get_config();
+    return unless -f $config->{'stackfile'};
+    _nip_stack( $app );
     return;
 }
 
 sub _nip_stack
 {
-    return unless -f $config{'stackfile'};
-    open my $fh, '+<', $config{'stackfile'} or die "Unable to modify stack file: $!\n";
+    my $config = (shift)->get_config();
+    return unless -f $config->{'stackfile'};
+    open my $fh, '+<', $config->{'stackfile'} or die "Unable to modify stack file: $!\n";
     my ( $prevpos, $lastpos, $lastline );
     my ( $pos, $line );
     while( my ( $line, $pos ) = _readline_pos( $fh ) )
@@ -453,8 +453,9 @@ sub _nip_stack
 
 sub _pop_stack
 {
-    return unless -f $config{'stackfile'};
-    open my $fh, '+<', $config{'stackfile'} or die "Unable to modify stack file: $!\n";
+    my $config = (shift)->get_config();
+    return unless -f $config->{'stackfile'};
+    open my $fh, '+<', $config->{'stackfile'} or die "Unable to modify stack file: $!\n";
     my ( $lastpos, $lastline );
     my ( $pos,     $line );
     while( my ( $line, $pos ) = _readline_pos( $fh ) )
@@ -470,9 +471,9 @@ sub _pop_stack
 
 sub list_stack
 {
-    my ( $app ) = @_;
-    return unless -f $config{'stackfile'};
-    open my $fh, '<', $config{'stackfile'} or die "Unable to read stack file: $!\n";
+    my $config = (shift)->get_config();
+    return unless -f $config->{'stackfile'};
+    open my $fh, '<', $config->{'stackfile'} or die "Unable to read stack file: $!\n";
     my @lines = <$fh>;
     @lines = reverse @lines if @lines > 1;
     print @lines;
@@ -490,8 +491,9 @@ sub _readline_pos
 
 sub _get_last_event
 {
+    my ($app) = @_;
     my $event_line;
-    _each_logline( sub { $event_line = $_; } );
+    _each_logline( $app, sub { $event_line = $_; } );
     chomp $event_line;
     $event_line =~ s{^(\d+)[-/](\d+)[-/](\d+)\s(\d+):(\d+):(\d+)\s+}{};    # strip timestamp
 
