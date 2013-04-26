@@ -7,6 +7,7 @@ use 5.010;
 use Carp;
 use POSIX qw(strftime);
 use Time::Local;
+use App::CmdDispatch;
 use Getopt::Long qw(:config posix_default);
 use Config::Tiny;
 use App::TimelogTxt::Day;
@@ -24,73 +25,82 @@ my $config_file = "$ENV{HOME}/.timelogrc";
 
 my %commands = (
     'start' => {
-        code     => \&log_event,
-        synopsis => 'start {event description}',
+        code     => \&start_event,
+        clue     => 'start {event description}',
+        abstract => 'Start timing a new event.',
         help     => 'Stop last event and start timing a new event.',
     },
     'stop' => {
         code     => sub { log_event( 'stop' ); },
-        synopsis => 'stop',
+        clue     => 'stop',
+        abstract => 'Stop timing last event.',
         help     => 'Stop timing last event.',
     },
     'push' => {
         code     => \&push_event,
-        synopsis => 'push {event description}',
+        clue     => 'push {event description}',
+        abstract => 'Save current event and start timing new.',
         help     => 'Save last event on stack and start timing new event.',
     },
     'pop' => {
         code     => \&pop_event,
-        synopsis => 'pop',
+        clue     => 'pop',
+        abstract => 'Return to last pushed event.',
         help     => 'Stop last event and restart top event on stack.',
     },
     'drop' => {
         code     => \&drop_event,
-        synopsis => 'drop [all|{n}]',
-        help     => 'Drop one or more items from top of event stack or all if argument supplied.',
+        clue     => 'drop [all|{n}]',
+        abstract => 'Drop items from stack.',
+        help     => 'Drop one or more items from top of event stack, or all
+if argument supplied.',
     },
     'nip' => {
         code     => \&nip_event,
-        synopsis => 'nip',
+        clue     => 'nip',
+        abstract => 'Drop one item under top.',
         help     => 'Drop one item from under the top of event stack.',
     },
     'ls' => {
         code     => \&list_events,
-        synopsis => 'ls [date]',
+        clue     => 'ls [date]',
+        abstract => 'List events.',
         help     => 'List events for the specified day. Default to today.',
     },
     'lsproj' => {
         code     => \&list_projects,
-        synopsis => 'lsproj',
+        clue     => 'lsproj',
+        abstract => 'List known projects.',
         help     => 'List known projects.',
     },
     'lstk' => {
         code     => \&list_stack,
-        synopsis => 'lstk',
+        clue     => 'lstk',
+        abstract => 'Display items on the stack.',
         help     => 'Display items on the stack.',
     },
     'edit' => {
         code     => sub { system $config{'editor'}, $config{'logfile'}; },
-        synopsis => 'edit',
+        clue     => 'edit',
+        abstract => 'Edit the timelog file.',
         help => 'Open the timelog file in the current editor',
-    },
-    'help' => {
-        code     => \&usage,
-        synopsis => 'help [commands|aliases]',
-        help     => 'A list of commands and/or aliases. Limit display with the argument.',
     },
     'report' => {
         code     => \&daily_report,
-        synopsis => 'report [date [end date]]',
+        clue     => 'report [date [end date]]',
+        abstract => 'Task report.',
         help     => 'Display a report for the specified days.',
     },
     'summary' => {
         code     => \&daily_summary,
-        synopsis => 'summary [date [end date]]',
+        clue     => 'summary [date [end date]]',
+        abstract => 'Short summary report.',
         help     => q{Display a summary of the appropriate days' projects.},
     },
     'hours' => {
         code     => \&report_hours,
-        synopsis => 'hours [date [end date]]',
+        clue     => 'hours [date [end date]]',
+        abstract => 'Hours report.',
         help     => q{Display the hours worked for each of the appropriate days.},
     },
 );
@@ -105,27 +115,23 @@ sub run
     );
 
     %config = initialize_configuration( $config_file );
+    my $options = {
+        config_file      => $config_file,
+        default_commands => 'help shell',
+        'help:post_hint' =>
+            "\nwhere [date] is an optional string specifying a date of the form YYYY-MM-DD
+or a day name: yesterday, today, or sunday .. saturday.\n",
+        'help:post_help' =>
+            "\nwhere [date] is an optional string specifying a date of the form YYYY-MM-DD
+or a day name: yesterday, today, or sunday .. saturday.\n",
+    };
+    my $app = App::CmdDispatch->new( \%commands, $options );
 
     # Handle default command if none specified
     @ARGV = split / /, ( $config{'defcmd'} || 'stop' ) unless @ARGV;
 
-    # Handle alias if one is supplied
-    my $cmd = shift @ARGV;
-    if( exists $config{'alias'}->{$cmd} )
-    {
-        ( $cmd, @ARGV ) = ( ( split / /, $config{'alias'}->{$cmd} ), @ARGV );
-    }
+    $app->run( @ARGV );
 
-    # Handle builtin commands
-    if( exists $commands{$cmd} )
-    {
-        $commands{$cmd}->{'code'}->( @ARGV );
-    }
-    else
-    {
-        print "Unrecognized command '$cmd'\n\n";
-        usage();
-    }
     return;
 }
 
@@ -205,31 +211,6 @@ sub initialize_configuration
     return %config;
 }
 
-sub usage
-{
-    my ( $arg ) = @_;
-    if( !$arg or $arg eq 'commands' )
-    {
-        print "\nCommands:\n";
-        foreach my $c ( sort keys %commands )
-        {
-            my $d = $commands{$c};
-            print "$d->{synopsis}\n        $d->{help}\n";
-        }
-        print "\nwhere [date] is an optional string specifying a date of the form YYYY-MM-DD
-or a day name: yesterday, today, or sunday .. saturday.\n";
-    }
-    if( !$arg or $arg eq 'aliases' )
-    {
-        print "\nAliases:\n";
-        foreach my $c ( sort keys %{ $config{'alias'} } )
-        {
-            print "$c\t: $config{'alias'}->{$c}\n";
-        }
-    }
-    return;
-}
-
 sub _open_logfile
 {
     open my $fh, '<', $config{'logfile'} or die "Cannot open timelog ($config{'logfile'}): $!\n";
@@ -238,7 +219,7 @@ sub _open_logfile
 
 sub _each_logline
 {
-    my ($code) = @_;
+    my ( $code ) = @_;
     my $fh = _open_logfile();
     $code->() while( <$fh> );
     return;
@@ -246,7 +227,7 @@ sub _each_logline
 
 sub list_events
 {
-    my ( $day ) = @_;
+    my ( $app, $day ) = @_;
     $day ||= 'today';
     my $stamp = day_stamp( $day );
 
@@ -256,18 +237,21 @@ sub list_events
 
 sub list_projects
 {
+    my ( $app ) = @_;
     my %projects;
-    _each_logline( sub {
-        my ( @projs ) = m/\+(\S+)/g;
-        @projects{@projs} = ( 1 ) x @projs if @projs;
-    } );
+    _each_logline(
+        sub {
+            my ( @projs ) = m/\+(\S+)/g;
+            @projects{@projs} = ( 1 ) x @projs if @projs;
+        }
+    );
     print "$_\n" foreach sort keys %projects;
     return;
 }
 
 sub daily_report
 {
-    my ( $day, $eday ) = @_;
+    my ( $app, $day, $eday ) = @_;
 
     my $summaries = extract_day_tasks( $day, $eday );
 
@@ -280,7 +264,7 @@ sub daily_report
 
 sub daily_summary
 {
-    my ( $day, $eday ) = @_;
+    my ( $app, $day, $eday ) = @_;
 
     my $summaries = extract_day_tasks( $day, $eday );
 
@@ -293,7 +277,7 @@ sub daily_summary
 
 sub report_hours
 {
-    my ( $day, $eday ) = @_;
+    my ( $app, $day, $eday ) = @_;
 
     my $summaries = extract_day_tasks( $day, $eday );
 
@@ -393,18 +377,27 @@ sub _day_end
     return strftime( '%Y-%m-%d', localtime( _stamp_to_localtime( $stamp ) + 86400 ) );
 }
 
+sub start_event
+{
+    my ( $app, @event ) = @_;
+    log_event( @event );
+    return;
+}
+
 sub push_event
 {
+    my ( $app, @event ) = @_;
     {
         open my $fh, '>>', $config{'stackfile'} or die "Unable to write to stack file: $!\n";
         print {$fh} _get_last_event(), "\n";
     }
-    log_event( @_ );
+    log_event( @event );
     return;
 }
 
 sub pop_event
 {
+    my ( $app ) = @_;
     return unless -f $config{'stackfile'};
     my $event = _pop_stack();
     die "Event stack is empty.\n" unless $event;
@@ -414,7 +407,7 @@ sub pop_event
 
 sub drop_event
 {
-    my $arg = shift;
+    my ( $app, $arg ) = @_;
     return unless -f $config{'stackfile'};
     if( !defined $arg )
     {
@@ -433,6 +426,7 @@ sub drop_event
 
 sub nip_event
 {
+    my ( $app ) = @_;
     return unless -f $config{'stackfile'};
     _nip_stack();
     return;
@@ -476,6 +470,7 @@ sub _pop_stack
 
 sub list_stack
 {
+    my ( $app ) = @_;
     return unless -f $config{'stackfile'};
     open my $fh, '<', $config{'stackfile'} or die "Unable to read stack file: $!\n";
     my @lines = <$fh>;
