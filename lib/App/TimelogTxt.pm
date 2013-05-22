@@ -6,6 +6,7 @@ use 5.010;
 
 use Carp;
 use POSIX qw(strftime);
+use autodie;
 use Time::Local;
 use App::CmdDispatch;
 use Getopt::Long qw(:config posix_default);
@@ -189,8 +190,7 @@ sub log_event
 {
     my $app    = shift;
     my $config = $app->get_config();
-    open my $fh, '>>', $config->{'logfile'}
-        or die "Cannot open timelog ($config->{'logfile'}): $!\n";
+    open my $fh, '>>', $config->{'logfile'};
     print {$fh} _fmt_time( time ), " @_\n";
     return;
 }
@@ -222,8 +222,7 @@ sub initialize_configuration
 sub _open_logfile
 {
     my $config = ( shift )->get_config();
-    open my $fh, '<', $config->{'logfile'}
-        or die "Cannot open timelog ($config->{'logfile'}): $!\n";
+    open my $fh, '<', $config->{'logfile'};
     return $fh;
 }
 
@@ -399,8 +398,7 @@ sub push_event
 {
     my ( $app, @event ) = @_;
     {
-        open my $fh, '>>', $app->get_config()->{'stackfile'}
-            or die "Unable to write to stack file: $!\n";
+        open my $fh, '>>', $app->get_config()->{'stackfile'};
         print {$fh} _get_last_event( $app ), "\n";
     }
     log_event( $app, @event );
@@ -450,7 +448,7 @@ sub _nip_stack
 {
     my $config = ( shift )->get_config();
     return unless -f $config->{'stackfile'};
-    open my $fh, '+<', $config->{'stackfile'} or die "Unable to modify stack file: $!\n";
+    open my $fh, '+<', $config->{'stackfile'};
     my ( $prevpos, $lastpos, $lastline );
     my ( $pos, $line );
     while( my ( $line, $pos ) = _readline_pos( $fh ) )
@@ -470,7 +468,7 @@ sub _pop_stack
 {
     my $config = ( shift )->get_config();
     return unless -f $config->{'stackfile'};
-    open my $fh, '+<', $config->{'stackfile'} or die "Unable to modify stack file: $!\n";
+    open my $fh, '+<', $config->{'stackfile'};
     my ( $lastpos, $lastline );
     my ( $pos,     $line );
     while( my ( $line, $pos ) = _readline_pos( $fh ) )
@@ -488,7 +486,7 @@ sub list_stack
 {
     my $config = ( shift )->get_config();
     return unless -f $config->{'stackfile'};
-    open my $fh, '<', $config->{'stackfile'} or die "Unable to read stack file: $!\n";
+    open my $fh, '<', $config->{'stackfile'};
     my @lines = <$fh>;
     @lines = reverse @lines if @lines > 1;
     print @lines;
