@@ -30,8 +30,8 @@ my %commands = (
         help     => 'Stop last event and start timing a new event.',
     },
     'stop' => {
-        code     => sub { my $app = shift; log_event( $app, 'stop' ); },
-        clue     => 'stop',
+        code => sub { my $app = shift; log_event( $app, 'stop' ); },
+        clue => 'stop',
         abstract => 'Stop timing last event.',
         help     => 'Stop timing last event.',
     },
@@ -82,7 +82,7 @@ if argument supplied.',
         code     => \&edit_logfile,
         clue     => 'edit',
         abstract => 'Edit the timelog file.',
-        help => 'Open the timelog file in the current editor',
+        help     => 'Open the timelog file in the current editor',
     },
     'report' => {
         code     => \&daily_report,
@@ -133,9 +133,21 @@ or a day name: yesterday, today, or sunday .. saturday.\n",
     return;
 }
 
+sub _fmt_date
+{
+    my ( $time ) = @_;
+    return strftime( '%Y-%m-%d', localtime $time );
+}
+
+sub _fmt_time
+{
+    my ( $time ) = @_;
+    return strftime( '%Y-%m-%d %T', localtime $time );
+}
+
 sub today_stamp
 {
-    return strftime( '%Y-%m-%d', localtime time );
+    return _fmt_date( time );
 }
 
 sub day_stamp
@@ -170,15 +182,16 @@ sub day_stamp
         $delta = $wday - $index;
         $delta += 7 if $delta < 1;
     }
-    return strftime( '%Y-%m-%d', localtime $now - 86400 * $delta );
+    return _fmt_date( $now - 86400 * $delta );
 }
 
 sub log_event
 {
-    my $app = shift;
+    my $app    = shift;
     my $config = $app->get_config();
-    open my $fh, '>>', $config->{'logfile'} or die "Cannot open timelog ($config->{'logfile'}): $!\n";
-    print {$fh} strftime( '%Y-%m-%d %T', localtime time ), " @_\n";
+    open my $fh, '>>', $config->{'logfile'}
+        or die "Cannot open timelog ($config->{'logfile'}): $!\n";
+    print {$fh} _fmt_time( time ), " @_\n";
     return;
 }
 
@@ -195,7 +208,7 @@ sub initialize_configuration
     my ( $config ) = @_;
 
     $config->{editor} ||= $config{editor} || $ENV{'VISUAL'} || $ENV{'EDITOR'} || '/usr/bin/vim';
-    $config->{dir}    ||= $config{dir} || "$ENV{HOME}/timelog";
+    $config->{dir} ||= $config{dir} || "$ENV{HOME}/timelog";
     $config->{defcmd} ||= $config{defcmd} || 'stop';
     $config->{'dir'} =~ s/~/$ENV{HOME}/;
     foreach my $d ( [qw/logfile timelog.txt/], [qw/stackfile stack.txt/] )
@@ -208,8 +221,9 @@ sub initialize_configuration
 
 sub _open_logfile
 {
-    my $config = (shift)->get_config();
-    open my $fh, '<', $config->{'logfile'} or die "Cannot open timelog ($config->{'logfile'}): $!\n";
+    my $config = ( shift )->get_config();
+    open my $fh, '<', $config->{'logfile'}
+        or die "Cannot open timelog ($config->{'logfile'}): $!\n";
     return $fh;
 }
 
@@ -371,7 +385,7 @@ sub _stamp_to_localtime
 sub _day_end
 {
     my ( $stamp ) = @_;
-    return strftime( '%Y-%m-%d', localtime( _stamp_to_localtime( $stamp ) + 86400 ) );
+    return _fmt_date( _stamp_to_localtime( $stamp ) + 86400 );
 }
 
 sub start_event
@@ -385,7 +399,8 @@ sub push_event
 {
     my ( $app, @event ) = @_;
     {
-        open my $fh, '>>', $app->get_config()->{'stackfile'} or die "Unable to write to stack file: $!\n";
+        open my $fh, '>>', $app->get_config()->{'stackfile'}
+            or die "Unable to write to stack file: $!\n";
         print {$fh} _get_last_event( $app ), "\n";
     }
     log_event( $app, @event );
@@ -424,7 +439,7 @@ sub drop_event
 
 sub nip_event
 {
-    my $app = shift;
+    my $app    = shift;
     my $config = $app->get_config();
     return unless -f $config->{'stackfile'};
     _nip_stack( $app );
@@ -433,7 +448,7 @@ sub nip_event
 
 sub _nip_stack
 {
-    my $config = (shift)->get_config();
+    my $config = ( shift )->get_config();
     return unless -f $config->{'stackfile'};
     open my $fh, '+<', $config->{'stackfile'} or die "Unable to modify stack file: $!\n";
     my ( $prevpos, $lastpos, $lastline );
@@ -453,7 +468,7 @@ sub _nip_stack
 
 sub _pop_stack
 {
-    my $config = (shift)->get_config();
+    my $config = ( shift )->get_config();
     return unless -f $config->{'stackfile'};
     open my $fh, '+<', $config->{'stackfile'} or die "Unable to modify stack file: $!\n";
     my ( $lastpos, $lastline );
@@ -471,7 +486,7 @@ sub _pop_stack
 
 sub list_stack
 {
-    my $config = (shift)->get_config();
+    my $config = ( shift )->get_config();
     return unless -f $config->{'stackfile'};
     open my $fh, '<', $config->{'stackfile'} or die "Unable to read stack file: $!\n";
     my @lines = <$fh>;
@@ -491,7 +506,7 @@ sub _readline_pos
 
 sub _get_last_event
 {
-    my ($app) = @_;
+    my ( $app ) = @_;
     my $event_line;
     _each_logline( $app, sub { $event_line = $_; } );
     chomp $event_line;
