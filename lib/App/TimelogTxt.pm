@@ -16,6 +16,13 @@ use App::TimelogTxt::File;
 
 our $VERSION = '0.003';
 
+# Constants
+my @DAYS      = qw/sunday monday tuesday wednesday thursday friday saturday/;
+my $TODAY     = 'today';
+my $YESTERDAY = 'yesterday';
+my $ONE_DAY   = 86400;
+my $STOP_CMD  = 'stop';
+
 my %config = (
     editor => '',
     dir    => '',
@@ -30,9 +37,9 @@ my %commands = (
         abstract => 'Start timing a new event.',
         help     => 'Stop last event and start timing a new event.',
     },
-    'stop' => {
-        code => sub { my $app = shift; log_event( $app, 'stop' ); },
-        clue => 'stop',
+    $STOP_CMD => {
+        code => sub { my $app = shift; log_event( $app, $STOP_CMD ); },
+        clue => $STOP_CMD,
         abstract => 'Stop timing last event.',
         help     => 'Stop timing last event.',
     },
@@ -127,7 +134,7 @@ or a day name: yesterday, today, or sunday .. saturday.\n",
     initialize_configuration( $app->get_config() );
 
     # Handle default command if none specified
-    @ARGV = split / /, ( $app->get_config()->{'defcmd'} || 'stop' ) unless @ARGV;
+    @ARGV = split / /, ( $app->get_config()->{'defcmd'} || $STOP_CMD ) unless @ARGV;
 
     $app->run( @ARGV );
 
@@ -154,36 +161,42 @@ sub today_stamp
 sub day_stamp
 {
     my ( $day ) = @_;
-    return today_stamp() if !$day or $day eq 'today';
+    return today_stamp() if !$day or $day eq $TODAY;
 
     # Parse the string to generate a reasonable guess for the day.
     return $day if $day =~ s!^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$!$1-$2-$3!;
 
     $day = lc $day;
-    return
-        unless grep { $day eq $_ }
-            qw/yesterday sunday monday tuesday wednesday thursday friday saturday/;
+    return unless grep { $day eq $_ } $YESTERDAY, @DAYS;
 
     my $now   = time;
     my $delta = 0;
-    if( $day eq 'yesterday' )
+    if( $day eq $YESTERDAY )
     {
         $delta = 1;
     }
     else
     {
-        my $wday  = ( localtime $now )[6];
-        my $index = 0;
-        foreach my $try ( qw/sunday monday tuesday wednesday thursday friday saturday/ )
-        {
-            last if $try eq lc $day;
-            ++$index;
-        }
-        return if $index > 6;
+        my $index = day_num_from_name( $day );
+        return if $index < 0;
+        my $wday = ( localtime $now )[6];
         $delta = $wday - $index;
         $delta += 7 if $delta < 1;
     }
-    return _fmt_date( $now - 86400 * $delta );
+    return _fmt_date( $now - $ONE_DAY * $delta );
+}
+
+sub day_num_from_name
+{
+    my ($day) = @_;
+    $day = lc $day;
+    my $index = 0;
+    foreach my $try ( @DAYS )
+    {
+        return $index if $try eq $day;
+        ++$index;
+    }
+    return -1 if $index > $#DAYS;
 }
 
 sub log_event
@@ -209,7 +222,7 @@ sub initialize_configuration
 
     $config->{editor} ||= $config{editor} || $ENV{'VISUAL'} || $ENV{'EDITOR'} || '/usr/bin/vim';
     $config->{dir} ||= $config{dir} || "$ENV{HOME}/timelog";
-    $config->{defcmd} ||= $config{defcmd} || 'stop';
+    $config->{defcmd} ||= $config{defcmd} || $STOP_CMD;
     $config->{'dir'} =~ s/~/$ENV{HOME}/;
     foreach my $d ( [qw/logfile timelog.txt/], [qw/stackfile stack.txt/] )
     {
@@ -237,7 +250,7 @@ sub _each_logline
 sub list_events
 {
     my ( $app, $day ) = @_;
-    $day ||= 'today';
+    $day ||= $TODAY;
     my $stamp = day_stamp( $day );
 
     _each_logline( $app, sub { print if 0 == index $_, $stamp; } );
@@ -301,7 +314,7 @@ sub report_hours
 sub extract_day_tasks
 {
     my ( $app, $day, $eday ) = @_;
-    $day ||= 'today';
+    $day ||= $TODAY;
 
     my $stamp = day_stamp( $day );
     die "No day provided.\n" unless defined $stamp;
@@ -326,7 +339,7 @@ sub extract_day_tasks
         $}x;
         if( $prev_stamp ne $new_stamp )
         {
-            if( $summary and $task ne 'stop' )
+            if( $summary and $task ne $STOP_CMD )
             {
                 $summary->update_dur( \%last, $new_stamp );
                 %last = ();
@@ -344,7 +357,7 @@ sub extract_day_tasks
 
         $summary->update_dur( \%last, $epoch );
 
-        if( $task eq 'stop' )
+        if( $task eq $STOP_CMD )
         {
             %last = ();
         }
@@ -357,14 +370,8 @@ sub extract_day_tasks
 
     return [] unless $summary;
 
-    if( $day eq 'today' and $task ne 'stop' )
-    {
-        $summary->update_dur( \%last, time );
-    }
-    else
-    {
-        $summary->update_dur( \%last, _stamp_to_localtime( $estamp ) );
-    }
+    my $end_time = ( $day eq $TODAY and $task ne $STOP_CMD ) ? time : _stamp_to_localtime( $estamp );
+    $summary->update_dur( \%last, $end_time );
 
     return if $summary->is_empty;
 
@@ -384,7 +391,7 @@ sub _stamp_to_localtime
 sub _day_end
 {
     my ( $stamp ) = @_;
-    return _fmt_date( _stamp_to_localtime( $stamp ) + 86400 );
+    return _fmt_date( _stamp_to_localtime( $stamp ) + $ONE_DAY );
 }
 
 sub start_event
@@ -630,12 +637,12 @@ L<http://rt.cpan.org>.
 
 =head1 AUTHOR
 
-G. Wade Johnson  C<< <wade@cpan.org> >>
+G. Wade Johnson  C<< <gwadej@cpan.org> >>
 
 
 =head1 LICENCE AND COPYRIGHT
 
-Copyright (c) 2011, G. Wade Johnson C<< <wade@cpan.org> >>. All rights reserved.
+Copyright (c) 2013, G. Wade Johnson C<< <wade@cpan.org> >>. All rights reserved.
 
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself. See L<perlartistic>.
