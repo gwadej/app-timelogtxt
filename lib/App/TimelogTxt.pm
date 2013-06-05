@@ -13,6 +13,7 @@ use Getopt::Long qw(:config posix_default);
 use Config::Tiny;
 use App::TimelogTxt::Day;
 use App::TimelogTxt::File;
+use App::TimelogTxt::Event;
 
 our $VERSION = '0.003';
 
@@ -190,7 +191,7 @@ sub day_num_from_name
         return $index if $try eq $day;
         ++$index;
     }
-    return -1 if $index > $#DAYS;
+    return -1;
 }
 
 sub log_event
