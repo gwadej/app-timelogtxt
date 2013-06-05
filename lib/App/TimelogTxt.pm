@@ -62,12 +62,6 @@ my %commands = (
         help     => 'Drop one or more items from top of event stack, or all
 if argument supplied.',
     },
-    'nip' => {
-        code     => \&nip_event,
-        clue     => 'nip',
-        abstract => 'Drop one item under top.',
-        help     => 'Drop one item from under the top of event stack.',
-    },
     'ls' => {
         code     => \&list_events,
         clue     => 'ls [date]',
@@ -440,35 +434,6 @@ sub drop_event
         _pop_stack( $app ) foreach 1 .. $arg;
     }
     return;
-}
-
-sub nip_event
-{
-    my $app    = shift;
-    my $config = $app->get_config();
-    return unless -f $config->{'stackfile'};
-    _nip_stack( $app );
-    return;
-}
-
-sub _nip_stack
-{
-    my $config = ( shift )->get_config();
-    return unless -f $config->{'stackfile'};
-    open my $fh, '+<', $config->{'stackfile'};
-    my ( $prevpos, $lastpos, $lastline );
-    my ( $pos, $line );
-    while( my ( $line, $pos ) = _readline_pos( $fh ) )
-    {
-        $prevpos = $lastpos if defined $lastpos;
-        ( $lastpos, $lastline ) = ( $pos, $line );
-    }
-    return unless defined $lastline;
-    seek( $fh, $prevpos, 0 );
-    print {$fh} $lastline;
-    truncate( $fh, tell $fh );
-    chomp $lastline;
-    return $lastline;
 }
 
 sub _pop_stack
