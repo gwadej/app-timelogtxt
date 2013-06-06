@@ -3,36 +3,84 @@ package App::TimelogTxt::Event;
 use warnings;
 use strict;
 use Time::Local;
-
+use POSIX qw(strftime);
+ 
 our $VERSION = '0.03';
 
-sub STOP_CMD () { return 'stop'; }
+sub STOP_CMD { return 'stop'; }
+
+sub new
+{
+    my ($class, $task, $time) = @_;
+    $time ||= time;
+    my ( $proj ) = $task =~ /\+(\S+)/;
+    my $obj = {
+        epoch => $time, task => $task, project => $proj
+    };
+    return bless $obj, $class;
+}
 
 sub new_from_line
 {
     my ($class, $line) = @_;
+    die "Not a valid event line.\n" unless $line;
 
-    my ( $stamp, @fields ) = $line =~ m{^
-        (                             # the whole stamp
-            (\d+)[-/](\d+)[-/](\d+)   # date pieces
+    my ( $datetime, $stamp, $task ) = $line =~ m{^
+        (                             # the whole date and time stamp
+            ( \d+[-/]\d+[-/]\d+ )     # date stamp
+            \s\d+:\d+:\d+             # the time piece
         )
-        \s(\d+):(\d+):(\d+)           # the time pieces
         \s+(.*)                       # the log entry
     $}x;
     die "Not a valid event line.\n" unless $stamp;
 
-    $fields[0] -= 1900;
-    $fields[1] -= 1;
-    my $task = pop @fields;
     my ( $proj ) = $task =~ /\+(\S+)/;
-    my $epoch = timelocal( reverse @fields );
-    return bless { stamp => $stamp, task => $task, project => $proj, epoch => $epoch }, $class;
+    my $obj = {
+        stamp => $stamp, task => $task, project => $proj, _date_time => $datetime
+    };
+    return bless $obj, $class;
 }
 
-sub stamp { return $_[0]->{stamp}; }
-sub task  { return $_[0]->{task}; }
+sub task    { return $_[0]->{task}; }
 sub project { return $_[0]->{project}; }
-sub epoch { return $_[0]->{epoch}; }
+
+sub line
+{
+    my ($self) = @_;
+    return join( ' ', $self->_date_time, $self->task );
+}
+
+sub epoch
+{
+    my ($self) = @_;
+    if( !defined $self->{epoch} )
+    {
+        my @fields = split /\D/, $self->{_date_time};
+        $fields[0] -= 1900;
+        $fields[1] -= 1;
+        $self->{epoch} = timelocal( reverse @fields );
+    }
+    return $self->{epoch};
+}
+
+sub _date_time {
+    my ($self) = @_;
+    if( !defined $self->{_date_time} )
+    {
+        $self->{_date_time} = strftime( '%Y-%m-%d %T', localtime $self->{epoch} );
+    }
+    return $self->{_date_time};
+}
+
+sub stamp
+{
+    my ($self) = @_;
+    if( !defined $self->{stamp} )
+    {
+        $self->{stamp} = strftime( '%Y-%m-%d', localtime $self->{epoch} );
+    }
+    return $_[0]->{stamp};
+}
 
 sub is_stop { return ($_[0]->{task} eq STOP_CMD()); }
 
