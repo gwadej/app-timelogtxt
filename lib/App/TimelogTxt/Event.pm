@@ -8,17 +8,6 @@ our $VERSION = '0.03';
 
 sub STOP_CMD () { return 'stop'; }
 
-sub new
-{
-    my ($class, $stamp, @fields) = @_;
-    $fields[0] -= 1900;
-    $fields[1] -= 1;
-    my $task = pop @fields;
-    my ( $proj ) = $task =~ /\+(\S+)/;
-    my $epoch = timelocal( reverse @fields );
-    return bless { stamp => $stamp, task => $task, project => $proj, epoch => $epoch }, $class;
-}
-
 sub new_from_line
 {
     my ($class, $line) = @_;
@@ -32,7 +21,12 @@ sub new_from_line
     $}x;
     die "Not a valid event line.\n" unless $stamp;
 
-    return $class->new( $stamp, @fields );
+    $fields[0] -= 1900;
+    $fields[1] -= 1;
+    my $task = pop @fields;
+    my ( $proj ) = $task =~ /\+(\S+)/;
+    my $epoch = timelocal( reverse @fields );
+    return bless { stamp => $stamp, task => $task, project => $proj, epoch => $epoch }, $class;
 }
 
 sub stamp { return $_[0]->{stamp}; }
