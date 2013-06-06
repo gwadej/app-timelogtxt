@@ -1,113 +1,52 @@
-package App::TimelogTxt::Day;
+package App::TimelogTxt::Event;
 
 use warnings;
 use strict;
+use Time::Local;
 
 our $VERSION = '0.03';
 
-sub new {
-    my ($class, $stamp) = @_;
-    die "Missing required stamp.\n" unless $stamp;
+sub STOP_CMD () { return 'stop'; }
 
-    return bless {
-        stamp => $stamp,
-        start => undef,
-        dur => 0,
-        tasks => {},
-        proj_dur => {},
-    }, $class;
-}
-
-sub is_empty { return !$_[0]->{dur}; }
-
-sub set_start {
-    my ($self, $start) = @_;
-    $self->{start} ||= $start;
-    return;
-}
-
-sub update_dur {
-    my ($self, $last, $epoch) = @_;
-    my $curr_dur = $last->{epoch} ? $epoch - $last->{epoch} : 0;
-
-    $self->{tasks}->{$last->{task}}->{dur} += $curr_dur if $last->{task};
-    $self->{proj_dur}->{$last->{project}} += $curr_dur  if $last->{project};
-    $self->{dur} += $curr_dur;
-
-    return;
-}
-
-sub start_task {
-    my ($self, $event) = @_;
-    return if $event->is_stop;
-    my $task = $event->task;
-    return if $self->{tasks}->{$task};
-    $self->{tasks}->{$task} = { start => $event->epoch, proj => $event->project, dur => 0 };
-    return;
-}
-
-sub print_day_detail {
-    my ($self, $fh) = @_;
-    $fh ||= \*STDOUT;
-
-    my ($tasks, $proj_dur) = @{$self}{ qw/tasks proj_dur/ };
-    my $last_proj = '';
-
-    print {$fh} "\n$self->{stamp} ", _format_dur( $self->{dur} ), "\n";
-    foreach my $t ( sort { ($tasks->{$a}->{proj} cmp $tasks->{$b}->{proj}) || ($tasks->{$b}->{start} <=> $tasks->{$a}->{start}) }  keys %{$tasks} )
-    {
-        if( $tasks->{$t}->{proj} ne $last_proj )
-        {
-            printf {$fh} '  %-13s%s',  $tasks->{$t}->{proj}, _format_dur( $proj_dur->{$tasks->{$t}->{proj}} ). "\n";
-            $last_proj = $tasks->{$t}->{proj};
-        }
-        my $task = $t;
-        $task =~ s/\+\S+\s//;
-        if ( $task =~ s/\@(\S+)\s*// )
-        {
-            if ( $task ) {
-                printf {$fh} "    %-20s%s (%s)\n", $1, _format_dur( $tasks->{$t}->{dur} ), $task;
-            }
-            else {
-                printf {$fh} "    %-20s%s\n", $1, _format_dur( $tasks->{$t}->{dur} );
-            }
-        }
-        else {
-            printf {$fh} "    %-20s%s\n", $task, _format_dur( $tasks->{$t}->{dur} );
-        }
-    }
-    return;
-}
-
-sub print_day_summary {
-    my ($self, $fh) = @_;
-    $fh ||= \*STDOUT;
-
-    my $proj_dur = $self->{proj_dur};
-
-    print {$fh} "$self->{stamp} ", _format_dur( $self->{dur} ), "\n";
-    foreach my $p ( sort keys %{$proj_dur} )
-    {
-        printf {$fh} '  %-13s%s',  $p, _format_dur( $proj_dur->{$p} ). "\n";
-    }
-    return;
-}
-
-sub print_hours {
-    my ($self, $fh) = @_;
-    $fh ||= \*STDOUT;
-
-    my $proj_dur = $self->{proj_dur};
-
-    print {$fh} $self->{stamp}, ': ', _format_dur( $self->{dur} ), "\n";
-    return;
-}
-
-sub _format_dur
+sub new
 {
-    my ($dur) = @_;
-    $dur += 30; # round, don't truncate.
-    return sprintf '%2d:%02d', int($dur/3600), int(($dur%3600)/60);
+    my ($class, $stamp, @fields) = @_;
+    $fields[0] -= 1900;
+    $fields[1] -= 1;
+    my $task = pop @fields;
+    my ( $proj ) = $task =~ /\+(\S+)/;
+    my $epoch = timelocal( reverse @fields );
+    return bless { stamp => $stamp, task => $task, project => $proj, epoch => $epoch }, $class;
+}
+
+sub new_from_line
+{
+    my ($class, $line) = @_;
+
+    my ( $stamp, @fields ) = $line =~ m{^
+        (                             # the whole stamp
+            (\d+)[-/](\d+)[-/](\d+)   # date pieces
+        )
+        \s(\d+):(\d+):(\d+)           # the time pieces
+        \s+(.*)                       # the log entry
+    $}x;
+    die "Not a valid event line.\n" unless $stamp;
+
+    return $class->new( $stamp, @fields );
+}
+
+sub stamp { return $_[0]->{stamp}; }
+sub task  { return $_[0]->{task}; }
+sub project { return $_[0]->{project}; }
+sub epoch { return $_[0]->{epoch}; }
+
+sub is_stop { return ($_[0]->{task} eq STOP_CMD()); }
+
+sub snapshot
+{
+    my ($self) = @_;
+    return if $self->is_stop;
+    return %{$self};
 }
 
 1;

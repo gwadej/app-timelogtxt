@@ -22,7 +22,7 @@ my @DAYS      = qw/sunday monday tuesday wednesday thursday friday saturday/;
 my $TODAY     = 'today';
 my $YESTERDAY = 'yesterday';
 my $ONE_DAY   = 86400;
-my $STOP_CMD  = 'stop';
+my $STOP_CMD  = App::TimelogTxt::Event->STOP_CMD();
 
 my %config = (
     editor => '',
@@ -315,7 +315,7 @@ sub extract_day_tasks
     die "No day provided.\n" unless defined $stamp;
     my $estamp = $eday ? _day_end( day_stamp( $eday ) ) : _day_end( $stamp );
     my ( $summary, %last, @summaries );
-    my $task       = '';
+    my $event;
     my $prev_stamp = '';
 
     my $fh = _open_logfile( $app );
@@ -324,17 +324,13 @@ sub extract_day_tasks
     while( defined( $_ = $file->readline ) )
     {
         chomp;
-
-        next unless my ( $new_stamp, @fields ) = m{^
-            (                             # the whole stamp
-                (\d+)[-/](\d+)[-/](\d+)   # date pieces
-            )
-            \s(\d+):(\d+):(\d+)           # the time pieces
-            \s+(.*)                       # the log entry
-        $}x;
-        if( $prev_stamp ne $new_stamp )
+        eval {
+            $event = App::TimelogTxt::Event->new_from_line( $_ );
+        } or next;
+        if( $prev_stamp ne $event->stamp )
         {
-            if( $summary and $task ne $STOP_CMD )
+            my $new_stamp = $event->stamp;
+            if( $summary and !$event->is_stop )
             {
                 $summary->update_dur( \%last, $new_stamp );
                 %last = ();
@@ -343,29 +339,15 @@ sub extract_day_tasks
             push @summaries, $summary;
             $prev_stamp = $new_stamp;
         }
-        $fields[0] -= 1900;
-        $fields[1] -= 1;
-        $task = pop @fields;
-        my ( $proj ) = $task =~ /\+(\S+)/;
-        my $epoch = timelocal( reverse @fields );
-        $summary->set_start( $epoch );
-
-        $summary->update_dur( \%last, $epoch );
-
-        if( $task eq $STOP_CMD )
-        {
-            %last = ();
-        }
-        else
-        {
-            $summary->start_task( $task, $epoch, $proj );
-            @last{qw/task epoch proj/} = ( $task, $epoch, $proj );
-        }
+        $summary->set_start( $event->epoch );
+        $summary->update_dur( \%last, $event->epoch );
+        $summary->start_task( $event );
+        %last = $event->snapshot;
     }
 
     return [] unless $summary;
 
-    my $end_time = ( $day eq $TODAY and $task ne $STOP_CMD ) ? time : _stamp_to_localtime( $estamp );
+    my $end_time = ( $day eq $TODAY and !$event->is_stop ) ? time : _stamp_to_localtime( $estamp );
     $summary->update_dur( \%last, $end_time );
 
     return if $summary->is_empty;
