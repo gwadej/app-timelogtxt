@@ -7,7 +7,22 @@ use POSIX qw(strftime);
  
 our $VERSION = '0.03';
 
+my $lax_date_re = qr<[0-9]{4}[-/][01][0-9][-/][0-3][0-9]>;
+
 sub STOP_CMD { return 'stop'; }
+
+sub is_datestamp
+{
+    my ($stamp) = @_;
+    return scalar $stamp =~ m/^$lax_date_re$/;
+}
+
+sub canonical_datestamp
+{
+    my ($stamp) = @_;
+    $stamp =~ tr{/}{-};
+    return $stamp;
+}
 
 sub new
 {
@@ -25,16 +40,17 @@ sub new_from_line
     my ($class, $line) = @_;
     die "Not a valid event line.\n" unless $line;
 
-    my ( $datetime, $stamp, $task ) = $line =~ m{^
-        (                             # the whole date and time stamp
-            ( \d+[-/]\d+[-/]\d+ )     # date stamp
-            \s\d+:\d+:\d+             # the time piece
-        )
+    my ( $stamp, $time, $task ) = $line =~ m<^
+        ( $lax_date_re )                    # date stamp
+        \s
+        ( [01][0-9]:[0-5][0-9]:[0-6][0-9] ) # the time piece
         \s+(.*)                       # the log entry
-    $}x;
+    \Z>x;
     die "Not a valid event line.\n" unless $stamp;
 
     my ( $proj ) = $task =~ /\+(\S+)/;
+    $stamp       = canonical_datestamp( $stamp );
+    my $datetime = "$stamp $time";
     my $obj = {
         stamp => $stamp, task => $task, project => $proj, _date_time => $datetime
     };
@@ -44,7 +60,7 @@ sub new_from_line
 sub task    { return $_[0]->{task}; }
 sub project { return $_[0]->{project}; }
 
-sub line
+sub to_string
 {
     my ($self) = @_;
     return join( ' ', $self->_date_time, $self->task );
@@ -55,7 +71,7 @@ sub epoch
     my ($self) = @_;
     if( !defined $self->{epoch} )
     {
-        my @fields = split /\D/, $self->{_date_time};
+        my @fields = split /[^0-9]/, $self->{_date_time};
         $fields[0] -= 1900;
         $fields[1] -= 1;
         $self->{epoch} = timelocal( reverse @fields );
@@ -63,11 +79,17 @@ sub epoch
     return $self->{epoch};
 }
 
+sub _fmt_time
+{
+    my ( $time ) = @_;
+    return strftime( '%Y-%m-%d %T', localtime $time );
+}
+
 sub _date_time {
     my ($self) = @_;
     if( !defined $self->{_date_time} )
     {
-        $self->{_date_time} = strftime( '%Y-%m-%d %T', localtime $self->{epoch} );
+        $self->{_date_time} = _fmt_time( $self->{epoch} );
     }
     return $self->{_date_time};
 }

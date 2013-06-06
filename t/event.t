@@ -23,7 +23,7 @@ dies_ok { App::TimelogTxt::Event->new_from_line( 'This is not an event' ) } "new
     is( $event->project, 'proj1', "$label: project correct" );
     is( $event->task, '+proj1 do something', "$label: task correct" );
     is( $event->epoch, 1370444402, "$label: epoch correct" );
-    is( $event->line, $line, "$label: line correct" );
+    is( $event->to_string, $line, "$label: string correct" );
 }
 
 {
@@ -34,5 +34,5 @@ dies_ok { App::TimelogTxt::Event->new_from_line( 'This is not an event' ) } "new
     is( $event->project, 'proj1', "$label: project correct" );
     is( $event->task, '+proj1 do something', "$label: task correct" );
     is( $event->epoch, 1370444402, "$label: epoch correct" );
-    is( $event->line, '2013-06-05 10:00:02 +proj1 do something', "$label: line correct" );
+    is( $event->to_string, '2013-06-05 10:00:02 +proj1 do something', "$label: string correct" );
 }

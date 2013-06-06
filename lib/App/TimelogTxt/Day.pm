@@ -120,7 +120,7 @@ ModName - [One line description of module's purpose here]
 
 =head1 VERSION
 
-This document describes ModName version 0.0.3
+This document describes ModName version 0.03
 
 
 =head1 SYNOPSIS

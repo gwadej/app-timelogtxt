@@ -142,12 +142,6 @@ sub _fmt_date
     return strftime( '%Y-%m-%d', localtime $time );
 }
 
-sub _fmt_time
-{
-    my ( $time ) = @_;
-    return strftime( '%Y-%m-%d %T', localtime $time );
-}
-
 sub today_stamp
 {
     return _fmt_date( time );
@@ -159,7 +153,8 @@ sub day_stamp
     return today_stamp() if !$day or $day eq $TODAY;
 
     # Parse the string to generate a reasonable guess for the day.
-    return $day if $day =~ s!^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$!$1-$2-$3!;
+    return App::TimelogTxt::Event::canonical_datestamp( $day )
+        if App::TimelogTxt::Event::is_datestamp( $day );
 
     $day = lc $day;
     return unless grep { $day eq $_ } $YESTERDAY, @DAYS;
@@ -199,7 +194,8 @@ sub log_event
     my $app    = shift;
     my $config = $app->get_config();
     open my $fh, '>>', $config->{'logfile'};
-    print {$fh} _fmt_time( time ), " @_\n";
+    my $event = App::TimelogTxt::Event->new( "@_", time );
+    print {$fh} $event->to_string, "\n";
     return;
 }
 
@@ -323,7 +319,6 @@ sub extract_day_tasks
 
     while( defined( $_ = $file->readline ) )
     {
-        chomp;
         eval {
             $event = App::TimelogTxt::Event->new_from_line( $_ );
         } or next;
@@ -425,7 +420,6 @@ sub _pop_stack
     return unless -f $config->{'stackfile'};
     open my $fh, '+<', $config->{'stackfile'};
     my ( $lastpos, $lastline );
-    my ( $pos,     $line );
     while( my ( $line, $pos ) = _readline_pos( $fh ) )
     {
         ( $lastpos, $lastline ) = ( $pos, $line );
@@ -462,10 +456,9 @@ sub _get_last_event
     my ( $app ) = @_;
     my $event_line;
     _each_logline( $app, sub { $event_line = $_; } );
-    chomp $event_line;
-    $event_line =~ s{^(\d+)[-/](\d+)[-/](\d+)\s(\d+):(\d+):(\d+)\s+}{};    # strip timestamp
+    my $event = App::TimelogTxt::Event->new_from_line( $event_line );
 
-    return $event_line;
+    return $event->task;
 }
 
 1;
