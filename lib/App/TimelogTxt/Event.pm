@@ -7,14 +7,21 @@ use POSIX qw(strftime);
  
 our $VERSION = '0.03';
 
-my $lax_date_re = qr<[0-9]{4}[-/][01][0-9][-/][0-3][0-9]>;
+my $LAX_DATE_RE  = qr<[0-9]{4}[-/][01][0-9][-/][0-3][0-9]>;
+my $TIME_RE      = qr<[01][0-9]:[0-5][0-9]:[0-6][0-9]>;
+my $DATE_FMT     = '%Y-%m-%d';
+my $DATETIME_FMT = "$DATE_FMT %T";
+my $ONE_DAY      = 86400;
+my $TODAY        = 'today';
+my $YESTERDAY    = 'yesterday';
+my @DAYS         = qw/sunday monday tuesday wednesday thursday friday saturday/;
 
-sub STOP_CMD { return 'stop'; }
+sub TODAY    { return $TODAY; }
 
 sub is_datestamp
 {
     my ($stamp) = @_;
-    return scalar $stamp =~ m/^$lax_date_re$/;
+    return scalar $stamp =~ m/^$LAX_DATE_RE$/;
 }
 
 sub canonical_datestamp
@@ -28,7 +35,7 @@ sub new
 {
     my ($class, $task, $time) = @_;
     $time ||= time;
-    my ( $proj ) = $task =~ /\+(\S+)/;
+    my ( $proj ) = $task =~ m/\+(\S+)/;
     my $obj = {
         epoch => $time, task => $task, project => $proj
     };
@@ -41,14 +48,12 @@ sub new_from_line
     die "Not a valid event line.\n" unless $line;
 
     my ( $stamp, $time, $task ) = $line =~ m<^
-        ( $lax_date_re )                    # date stamp
-        \s
-        ( [01][0-9]:[0-5][0-9]:[0-6][0-9] ) # the time piece
-        \s+(.*)                       # the log entry
+        ( $LAX_DATE_RE ) \s ( $TIME_RE )
+        \s+(.*)          # the log entry
     \Z>x;
     die "Not a valid event line.\n" unless $stamp;
 
-    my ( $proj ) = $task =~ /\+(\S+)/;
+    my ( $proj ) = $task =~ m/\+(\S+)/;
     $stamp       = canonical_datestamp( $stamp );
     my $datetime = "$stamp $time";
     my $obj = {
@@ -63,7 +68,7 @@ sub project { return $_[0]->{project}; }
 sub to_string
 {
     my ($self) = @_;
-    return join( ' ', $self->_date_time, $self->task );
+    return $self->_date_time . ' ' . $self->task;
 }
 
 sub epoch
@@ -82,7 +87,13 @@ sub epoch
 sub _fmt_time
 {
     my ( $time ) = @_;
-    return strftime( '%Y-%m-%d %T', localtime $time );
+    return strftime( $DATETIME_FMT, localtime $time );
+}
+
+sub _fmt_date
+{
+    my ( $time ) = @_;
+    return strftime( $DATE_FMT, localtime $time );
 }
 
 sub _date_time {
@@ -94,22 +105,94 @@ sub _date_time {
     return $self->{_date_time};
 }
 
+sub stamp_to_localtime
+{
+    my ( $stamp ) = @_;
+    my @date = split /-/, $stamp;
+    return unless @date == 3;
+    $date[0] -= 1900;
+    --$date[1];
+    return Time::Local::timelocal( 59, 59, 23, reverse @date );
+}
+
+sub today_stamp
+{
+    return _fmt_date( time );
+}
+
+sub day_end
+{
+    my ( $stamp ) = @_;
+    return _fmt_date( stamp_to_localtime( $stamp ) + $ONE_DAY );
+}
+
 sub stamp
 {
     my ($self) = @_;
     if( !defined $self->{stamp} )
     {
-        $self->{stamp} = strftime( '%Y-%m-%d', localtime $self->{epoch} );
+        $self->{stamp} = strftime( $DATE_FMT, localtime $self->{epoch} );
     }
     return $_[0]->{stamp};
 }
 
-sub is_stop { return ($_[0]->{task} eq STOP_CMD()); }
+sub is_today
+{
+    my ($day) = @_;
+    return (!$day or $day eq $TODAY);
+}
+
+sub day_stamp
+{
+    my ( $day ) = @_;
+    return App::TimelogTxt::Event::today_stamp() if is_today( $day );
+
+    # Parse the string to generate a reasonable guess for the day.
+    return App::TimelogTxt::Event::canonical_datestamp( $day )
+        if App::TimelogTxt::Event::is_datestamp( $day );
+
+    $day = lc $day;
+    return unless grep { $day eq $_ } $YESTERDAY, @DAYS;
+
+    my $now   = time;
+    my $delta = 0;
+    if( $day eq $YESTERDAY )
+    {
+        $delta = 1;
+    }
+    else
+    {
+        my $index = day_num_from_name( $day );
+        return if $index < 0;
+        my $wday = ( localtime $now )[6];
+        $delta = $wday - $index;
+        $delta += 7 if $delta < 1;
+    }
+    return _fmt_date( $now - $ONE_DAY * $delta );
+}
+
+sub day_num_from_name
+{
+    my ($day) = @_;
+    $day = lc $day;
+    my $index = 0;
+    foreach my $try ( @DAYS )
+    {
+        return $index if $try eq $day;
+        ++$index;
+    }
+    return -1;
+}
+
+sub is_task
+{
+    my ($self, $task) = @_;
+    return ($task && $_[0]->{task} eq $task);
+}
 
 sub snapshot
 {
     my ($self) = @_;
-    return if $self->is_stop;
     return %{$self};
 }
 

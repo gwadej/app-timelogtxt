@@ -7,7 +7,6 @@ use 5.010;
 use Carp;
 use POSIX qw(strftime);
 use autodie;
-use Time::Local;
 use App::CmdDispatch;
 use Getopt::Long qw(:config posix_default);
 use Config::Tiny;
@@ -18,11 +17,7 @@ use App::TimelogTxt::Event;
 our $VERSION = '0.003';
 
 # Constants
-my @DAYS      = qw/sunday monday tuesday wednesday thursday friday saturday/;
-my $TODAY     = 'today';
-my $YESTERDAY = 'yesterday';
-my $ONE_DAY   = 86400;
-my $STOP_CMD  = App::TimelogTxt::Event->STOP_CMD();
+sub STOP_CMD { return 'stop'; }
 
 my %config = (
     editor => '',
@@ -38,9 +33,9 @@ my %commands = (
         abstract => 'Start timing a new event.',
         help     => 'Stop last event and start timing a new event.',
     },
-    $STOP_CMD => {
-        code => sub { my $app = shift; log_event( $app, $STOP_CMD ); },
-        clue => $STOP_CMD,
+    STOP_CMD() => {
+        code => sub { my $app = shift; log_event( $app, STOP_CMD() ); },
+        clue => STOP_CMD(),
         abstract => 'Stop timing last event.',
         help     => 'Stop timing last event.',
     },
@@ -107,6 +102,38 @@ if argument supplied.',
     },
 );
 
+{
+    package Timelog::CmdDispatch;
+    use base 'App::CmdDispatch';
+
+    sub new
+    {
+        my $self = App::CmdDispatch::new( @_ );
+        $self->init();
+        return $self;
+    }
+
+    sub _logfile   { return $_[0]->get_config()->{'logfile'}; }
+    sub _stackfile { return $_[0]->get_config()->{'stackfile'}; }
+
+    sub init
+    {
+        my ($self) = @_;
+        my $config = $self->get_config();
+
+        $config->{editor} ||= $config{editor} || $ENV{'VISUAL'} || $ENV{'EDITOR'} || '/usr/bin/vim';
+        $config->{dir}    ||= $config{dir} || "$ENV{HOME}/timelog";
+        $config->{defcmd} ||= $config{defcmd} || App::TimelogTxt::STOP_CMD();
+        $config->{'dir'} =~ s/~/$ENV{HOME}/;
+        foreach my $d ( [qw/logfile timelog.txt/], [qw/stackfile stack.txt/] )
+        {
+            $config->{ $d->[0] } = "$config->{'dir'}/$d->[1]";
+            $config->{ $d->[0] } =~ s/~/$ENV{HOME}/;
+        }
+        return;
+    }
+}
+
 sub run
 {
     GetOptions(
@@ -125,75 +152,20 @@ or a day name: yesterday, today, or sunday .. saturday.\n",
             "\nwhere [date] is an optional string specifying a date of the form YYYY-MM-DD
 or a day name: yesterday, today, or sunday .. saturday.\n",
     };
-    my $app = App::CmdDispatch->new( \%commands, $options );
-    initialize_configuration( $app->get_config() );
+    my $app = Timelog::CmdDispatch->new( \%commands, $options );
 
     # Handle default command if none specified
-    @ARGV = split / /, ( $app->get_config()->{'defcmd'} || $STOP_CMD ) unless @ARGV;
+    @ARGV = split / /, ( $app->get_config()->{'defcmd'} || STOP_CMD() ) unless @ARGV;
 
     $app->run( @ARGV );
 
     return;
 }
 
-sub _fmt_date
-{
-    my ( $time ) = @_;
-    return strftime( '%Y-%m-%d', localtime $time );
-}
-
-sub today_stamp
-{
-    return _fmt_date( time );
-}
-
-sub day_stamp
-{
-    my ( $day ) = @_;
-    return today_stamp() if !$day or $day eq $TODAY;
-
-    # Parse the string to generate a reasonable guess for the day.
-    return App::TimelogTxt::Event::canonical_datestamp( $day )
-        if App::TimelogTxt::Event::is_datestamp( $day );
-
-    $day = lc $day;
-    return unless grep { $day eq $_ } $YESTERDAY, @DAYS;
-
-    my $now   = time;
-    my $delta = 0;
-    if( $day eq $YESTERDAY )
-    {
-        $delta = 1;
-    }
-    else
-    {
-        my $index = day_num_from_name( $day );
-        return if $index < 0;
-        my $wday = ( localtime $now )[6];
-        $delta = $wday - $index;
-        $delta += 7 if $delta < 1;
-    }
-    return _fmt_date( $now - $ONE_DAY * $delta );
-}
-
-sub day_num_from_name
-{
-    my ($day) = @_;
-    $day = lc $day;
-    my $index = 0;
-    foreach my $try ( @DAYS )
-    {
-        return $index if $try eq $day;
-        ++$index;
-    }
-    return -1;
-}
-
 sub log_event
 {
     my $app    = shift;
-    my $config = $app->get_config();
-    open my $fh, '>>', $config->{'logfile'};
+    open my $fh, '>>', $app->_logfile;
     my $event = App::TimelogTxt::Event->new( "@_", time );
     print {$fh} $event->to_string, "\n";
     return;
@@ -202,31 +174,14 @@ sub log_event
 sub edit_logfile
 {
     my ( $app ) = @_;
-    my $config = $app->get_config();
-    system $config->{editor}, $config->{logfile};
-    return;
-}
-
-sub initialize_configuration
-{
-    my ( $config ) = @_;
-
-    $config->{editor} ||= $config{editor} || $ENV{'VISUAL'} || $ENV{'EDITOR'} || '/usr/bin/vim';
-    $config->{dir} ||= $config{dir} || "$ENV{HOME}/timelog";
-    $config->{defcmd} ||= $config{defcmd} || $STOP_CMD;
-    $config->{'dir'} =~ s/~/$ENV{HOME}/;
-    foreach my $d ( [qw/logfile timelog.txt/], [qw/stackfile stack.txt/] )
-    {
-        $config->{ $d->[0] } = "$config->{'dir'}/$d->[1]";
-        $config->{ $d->[0] } =~ s/~/$ENV{HOME}/;
-    }
+    system $app->get_config()->{'editor'}, $app->_logfile;
     return;
 }
 
 sub _open_logfile
 {
-    my $config = ( shift )->get_config();
-    open my $fh, '<', $config->{'logfile'};
+    my ($app) = @_;
+    open my $fh, '<', $app->_logfile;
     return $fh;
 }
 
@@ -241,8 +196,7 @@ sub _each_logline
 sub list_events
 {
     my ( $app, $day ) = @_;
-    $day ||= $TODAY;
-    my $stamp = day_stamp( $day );
+    my $stamp = App::TimelogTxt::Event::day_stamp( $day );
 
     _each_logline( $app, sub { print if 0 == index $_, $stamp; } );
     return;
@@ -305,11 +259,10 @@ sub report_hours
 sub extract_day_tasks
 {
     my ( $app, $day, $eday ) = @_;
-    $day ||= $TODAY;
 
-    my $stamp = day_stamp( $day );
+    my $stamp = App::TimelogTxt::Event::day_stamp( $day );
     die "No day provided.\n" unless defined $stamp;
-    my $estamp = $eday ? _day_end( day_stamp( $eday ) ) : _day_end( $stamp );
+    my $estamp = App::TimelogTxt::Event::day_end( $eday ? App::TimelogTxt::Event::day_stamp( $eday ) : $stamp );
     my ( $summary, %last, @summaries );
     my $event;
     my $prev_stamp = '';
@@ -325,7 +278,7 @@ sub extract_day_tasks
         if( $prev_stamp ne $event->stamp )
         {
             my $new_stamp = $event->stamp;
-            if( $summary and !$event->is_stop )
+            if( $summary and !$event->is_task( STOP_CMD() ) )
             {
                 $summary->update_dur( \%last, $new_stamp );
                 %last = ();
@@ -337,33 +290,20 @@ sub extract_day_tasks
         $summary->set_start( $event->epoch );
         $summary->update_dur( \%last, $event->epoch );
         $summary->start_task( $event );
-        %last = $event->snapshot;
+        %last = ($event->is_task( STOP_CMD() ) ? () : $event->snapshot );
     }
 
     return [] unless $summary;
 
-    my $end_time = ( $day eq $TODAY and !$event->is_stop ) ? time : _stamp_to_localtime( $estamp );
+    my $end_time = ( App::TimelogTxt::Event::is_today( $day ) and !$event->is_task( STOP_CMD() ) )
+        ? time
+        : App::TimelogTxt::Event::stamp_to_localtime( $estamp );
+
     $summary->update_dur( \%last, $end_time );
 
     return if $summary->is_empty;
 
     return \@summaries;
-}
-
-sub _stamp_to_localtime
-{
-    my ( $stamp ) = @_;
-    my @date = split /-/, $stamp;
-    return unless @date == 3;
-    $date[0] -= 1900;
-    --$date[1];
-    return Time::Local::timelocal( 59, 59, 23, reverse @date );
-}
-
-sub _day_end
-{
-    my ( $stamp ) = @_;
-    return _fmt_date( _stamp_to_localtime( $stamp ) + $ONE_DAY );
 }
 
 sub start_event
@@ -377,7 +317,7 @@ sub push_event
 {
     my ( $app, @event ) = @_;
     {
-        open my $fh, '>>', $app->get_config()->{'stackfile'};
+        open my $fh, '>>', $app->_stackfile;
         print {$fh} _get_last_event( $app ), "\n";
     }
     log_event( $app, @event );
@@ -387,7 +327,7 @@ sub push_event
 sub pop_event
 {
     my ( $app ) = @_;
-    return unless -f $app->get_config()->{'stackfile'};
+    return unless -f $app->_stackfile;
     my $event = _pop_stack( $app );
     die "Event stack is empty.\n" unless $event;
     log_event( $app, $event );
@@ -397,15 +337,14 @@ sub pop_event
 sub drop_event
 {
     my ( $app, $arg ) = @_;
-    my $config = $app->get_config();
-    return unless -f $config->{'stackfile'};
+    return unless -f $app->_stackfile;
     if( !defined $arg )
     {
         _pop_stack( $app );
     }
     elsif( lc $arg eq 'all' )
     {
-        unlink $config->{'stackfile'};
+        unlink $app->_stackfile;
     }
     elsif( $arg =~ /^[0-9]+$/ )
     {
@@ -416,9 +355,9 @@ sub drop_event
 
 sub _pop_stack
 {
-    my $config = ( shift )->get_config();
-    return unless -f $config->{'stackfile'};
-    open my $fh, '+<', $config->{'stackfile'};
+    my ($app) = @_;
+    return unless -f $app->_stackfile;
+    open my $fh, '+<', $app->_stackfile;
     my ( $lastpos, $lastline );
     while( my ( $line, $pos ) = _readline_pos( $fh ) )
     {
@@ -433,12 +372,10 @@ sub _pop_stack
 
 sub list_stack
 {
-    my $config = ( shift )->get_config();
-    return unless -f $config->{'stackfile'};
-    open my $fh, '<', $config->{'stackfile'};
-    my @lines = <$fh>;
-    @lines = reverse @lines if @lines > 1;
-    print @lines;
+    my ($app) = @_;
+    return unless -f $app->_stackfile;
+    open my $fh, '<', $app->_stackfile;
+    print reverse <$fh>;
     return;
 }
 

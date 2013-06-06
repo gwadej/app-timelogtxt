@@ -8,9 +8,6 @@ use warnings;
 
 use App::TimelogTxt::Event;
 
-is( App::TimelogTxt::Event::STOP_CMD(), 'stop', "STOP_CMD as function." );
-is( App::TimelogTxt::Event->STOP_CMD(), 'stop', "STOP_CMD as class method." );
-
 dies_ok { App::TimelogTxt::Event->new_from_line() } "new_from_line dies with no argument.";
 dies_ok { App::TimelogTxt::Event->new_from_line( 'This is not an event' ) } "new_from_line dies with bad argument.";
 
