@@ -4,18 +4,15 @@ use warnings;
 use strict;
 use 5.010;
 
-use Carp;
-use POSIX qw(strftime);
 use autodie;
 use App::CmdDispatch;
 use Getopt::Long qw(:config posix_default);
-use Config::Tiny;
 use App::TimelogTxt::Utils;
 use App::TimelogTxt::Day;
 use App::TimelogTxt::File;
 use App::TimelogTxt::Event;
 
-our $VERSION = '0.003';
+our $VERSION = '0.03';
 
 
 my %config = (
@@ -370,7 +367,7 @@ App::TimelogTxt - Core code for timelog utility.
 
 =head1 VERSION
 
-This document describes App::TimelogTxt version 0.003
+This document describes App::TimelogTxt version 0.03
 
 
 =head1 SYNOPSIS
