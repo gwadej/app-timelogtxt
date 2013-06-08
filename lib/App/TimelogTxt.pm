@@ -10,14 +10,13 @@ use autodie;
 use App::CmdDispatch;
 use Getopt::Long qw(:config posix_default);
 use Config::Tiny;
+use App::TimelogTxt::Utils;
 use App::TimelogTxt::Day;
 use App::TimelogTxt::File;
 use App::TimelogTxt::Event;
 
 our $VERSION = '0.003';
 
-# Constants
-sub STOP_CMD { return 'stop'; }
 
 my %config = (
     editor => '',
@@ -33,9 +32,9 @@ my %commands = (
         abstract => 'Start timing a new event.',
         help     => 'Stop last event and start timing a new event.',
     },
-    STOP_CMD() => {
-        code => sub { my $app = shift; log_event( $app, STOP_CMD() ); },
-        clue => STOP_CMD(),
+    App::TimelogTxt::Utils::STOP_CMD() => {
+        code => sub { my $app = shift; log_event( $app, App::TimelogTxt::Utils::STOP_CMD() ); },
+        clue => App::TimelogTxt::Utils::STOP_CMD(),
         abstract => 'Stop timing last event.',
         help     => 'Stop timing last event.',
     },
@@ -123,7 +122,7 @@ if argument supplied.',
 
         $config->{editor} ||= $config{editor} || $ENV{'VISUAL'} || $ENV{'EDITOR'} || '/usr/bin/vim';
         $config->{dir}    ||= $config{dir} || "$ENV{HOME}/timelog";
-        $config->{defcmd} ||= $config{defcmd} || App::TimelogTxt::STOP_CMD();
+        $config->{defcmd} ||= $config{defcmd} || App::TimelogTxt::Utils::STOP_CMD();
         $config->{'dir'} =~ s/~/$ENV{HOME}/;
         foreach my $d ( [qw/logfile timelog.txt/], [qw/stackfile stack.txt/] )
         {
@@ -155,7 +154,7 @@ or a day name: yesterday, today, or sunday .. saturday.\n",
     my $app = Timelog::CmdDispatch->new( \%commands, $options );
 
     # Handle default command if none specified
-    @ARGV = split / /, ( $app->get_config()->{'defcmd'} || STOP_CMD() ) unless @ARGV;
+    @ARGV = split / /, $app->get_config()->{'defcmd'} unless @ARGV;
 
     $app->run( @ARGV );
 
@@ -178,17 +177,10 @@ sub edit_logfile
     return;
 }
 
-sub _open_logfile
-{
-    my ($app) = @_;
-    open my $fh, '<', $app->_logfile;
-    return $fh;
-}
-
 sub _each_logline
 {
     my ( $app, $code ) = @_;
-    my $fh = _open_logfile( $app );
+    open my $fh, '<', $app->_logfile;
     $code->() while( <$fh> );
     return;
 }
@@ -196,7 +188,7 @@ sub _each_logline
 sub list_events
 {
     my ( $app, $day ) = @_;
-    my $stamp = App::TimelogTxt::Event::day_stamp( $day );
+    my $stamp = App::TimelogTxt::Utils::day_stamp( $day );
 
     _each_logline( $app, sub { print if 0 == index $_, $stamp; } );
     return;
@@ -260,14 +252,14 @@ sub extract_day_tasks
 {
     my ( $app, $day, $eday ) = @_;
 
-    my $stamp = App::TimelogTxt::Event::day_stamp( $day );
+    my $stamp = App::TimelogTxt::Utils::day_stamp( $day );
     die "No day provided.\n" unless defined $stamp;
-    my $estamp = App::TimelogTxt::Event::day_end( $eday ? App::TimelogTxt::Event::day_stamp( $eday ) : $stamp );
+    my $estamp = App::TimelogTxt::Utils::day_end( $eday ? App::TimelogTxt::Utils::day_stamp( $eday ) : $stamp );
     my ( $summary, %last, @summaries );
     my $event;
     my $prev_stamp = '';
 
-    my $fh = _open_logfile( $app );
+    open my $fh, '<', $app->_logfile;
     my $file = App::TimelogTxt::File->new( $fh, $stamp, $estamp );
 
     while( defined( $_ = $file->readline ) )
@@ -278,7 +270,7 @@ sub extract_day_tasks
         if( $prev_stamp ne $event->stamp )
         {
             my $new_stamp = $event->stamp;
-            if( $summary and !$event->is_task( STOP_CMD() ) )
+            if( $summary and !$event->is_stop() )
             {
                 $summary->update_dur( \%last, $new_stamp );
                 %last = ();
@@ -290,12 +282,12 @@ sub extract_day_tasks
         $summary->set_start( $event->epoch );
         $summary->update_dur( \%last, $event->epoch );
         $summary->start_task( $event );
-        %last = ($event->is_task( STOP_CMD() ) ? () : $event->snapshot );
+        %last = ($event->is_stop() ? () : $event->snapshot );
     }
 
     return [] unless $summary;
 
-    my $end_time = ( App::TimelogTxt::Event::is_today( $day ) and !$event->is_task( STOP_CMD() ) )
+    my $end_time = ( App::TimelogTxt::Event::is_today( $day ) and !$event->is_stop() )
         ? time
         : App::TimelogTxt::Event::stamp_to_localtime( $estamp );
 
