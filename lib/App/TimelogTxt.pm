@@ -313,13 +313,18 @@ sub start_event
     return;
 }
 
+sub _stack
+{
+    my ($app) = @_;
+    require App::TimelogTxt::Stack;
+    return App::TimelogTxt::Stack->new( $app->_stackfile );
+}
+
 sub push_event
 {
     my ( $app, @event ) = @_;
-    {
-        open my $fh, '>>', $app->_stackfile;
-        print {$fh} _get_last_event( $app ), "\n";
-    }
+    my $stack = _stack( $app );
+    $stack->push( _get_last_event( $app ) );
     log_event( $app, @event );
     return;
 }
@@ -328,7 +333,8 @@ sub pop_event
 {
     my ( $app ) = @_;
     return unless -f $app->_stackfile;
-    my $event = _pop_stack( $app );
+    my $stack = _stack( $app );
+    my $event = $stack->pop;
     die "Event stack is empty.\n" unless $event;
     log_event( $app, $event );
     return;
@@ -338,53 +344,17 @@ sub drop_event
 {
     my ( $app, $arg ) = @_;
     return unless -f $app->_stackfile;
-    if( !defined $arg )
-    {
-        _pop_stack( $app );
-    }
-    elsif( lc $arg eq 'all' )
-    {
-        unlink $app->_stackfile;
-    }
-    elsif( $arg =~ /^[0-9]+$/ )
-    {
-        _pop_stack( $app ) foreach 1 .. $arg;
-    }
+    my $stack = _stack( $app );
+    $stack->drop( $arg );
     return;
-}
-
-sub _pop_stack
-{
-    my ($app) = @_;
-    return unless -f $app->_stackfile;
-    open my $fh, '+<', $app->_stackfile;
-    my ( $lastpos, $lastline );
-    while( my ( $line, $pos ) = _readline_pos( $fh ) )
-    {
-        ( $lastpos, $lastline ) = ( $pos, $line );
-    }
-    return unless defined $lastline;
-    seek( $fh, $lastpos, 0 );
-    truncate( $fh, $lastpos );
-    chomp $lastline;
-    return $lastline;
 }
 
 sub list_stack
 {
     my ($app) = @_;
     return unless -f $app->_stackfile;
-    open my $fh, '<', $app->_stackfile;
-    print reverse <$fh>;
-    return;
-}
-
-sub _readline_pos
-{
-    my $fh   = shift;
-    my $pos  = tell $fh;
-    my $line = <$fh>;
-    return ( $line, $pos ) if defined $line;
+    my $stack = _stack( $app );
+    $stack->list();
     return;
 }
 
