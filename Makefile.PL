@@ -7,6 +7,7 @@ WriteMakefile(
     AUTHOR              => 'G. Wade Johnson <gwadej@cpan.org>',
     VERSION_FROM        => 'lib/App/TimelogTxt.pm',
     ABSTRACT_FROM       => 'lib/App/TimelogTxt.pm',
+    EXE_FILES           => [ 'bin/timelog' ],
     PL_FILES            => {},
     PREREQ_PM => {
         'Test::More'       => 0,
