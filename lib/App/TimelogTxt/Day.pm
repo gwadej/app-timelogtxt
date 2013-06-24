@@ -39,7 +39,7 @@ sub update_dur {
 
 sub start_task {
     my ($self, $event) = @_;
-    return if $event->is_task( App::TimelogTxt::STOP_CMD() );
+    return if $event->is_stop();
     my $task = $event->task;
     return if $self->{tasks}->{$task};
     $self->{tasks}->{$task} = { start => $event->epoch, proj => $event->project, dur => 0 };

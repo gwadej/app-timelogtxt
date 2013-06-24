@@ -284,9 +284,9 @@ sub extract_day_tasks
 
     return [] unless $summary;
 
-    my $end_time = ( App::TimelogTxt::Event::is_today( $day ) and !$event->is_stop() )
+    my $end_time = ( App::TimelogTxt::Utils::is_today( $day ) and !$event->is_stop() )
         ? time
-        : App::TimelogTxt::Event::stamp_to_localtime( $estamp );
+        : App::TimelogTxt::Utils::stamp_to_localtime( $estamp );
 
     $summary->update_dur( \%last, $end_time );
 
