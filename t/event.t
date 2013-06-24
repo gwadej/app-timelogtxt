@@ -1,10 +1,7 @@
 #!/usr/bin/env perl
 
-use Test::More 'no_plan'; #tests => 1;
-use Test::Exception;
-
-use strict;
-use warnings;
+use Test::Most tests => 15;
+use Test::NoWarnings;
 
 use App::TimelogTxt::Event;
 

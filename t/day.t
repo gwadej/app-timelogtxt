@@ -1,11 +1,7 @@
 #!/usr/bin/env perl
 
-use Test::More 'no_plan'; #tests => 1;
+use Test::Most tests => 7;
 use Test::NoWarnings;
-use Test::Exception;
-
-use strict;
-use warnings;
 
 use App::TimelogTxt::Day;
 
