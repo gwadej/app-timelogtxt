@@ -11,4 +11,5 @@ cover_db
 pod2htm*.tmp
 App-TimelogTxt-*
 MYMETA.yml
+MYMETA.json
 *.bak
