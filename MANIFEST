@@ -16,5 +16,6 @@ t/day.t
 t/event.t
 t/file.t
 t/perlcritic.t
+t/utils.t
 xt/pod-coverage.t
 xt/pod.t

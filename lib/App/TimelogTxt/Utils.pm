@@ -8,7 +8,7 @@ use Time::Local;
 
 our $VERSION = '0.03';
 
-my $LAX_DATE_RE  = qr<[0-9]{4}[-/][01][0-9][-/][0-3][0-9]>;
+my $LAX_DATE_RE  = qr<[0-9]{4}[-/](?:0[1-9]|1[0-2])[-/](?:0[1-9]|[12][0-9]|3[01])>;
 my $TIME_RE      = qr<[01][0-9]:[0-5][0-9]:[0-6][0-9]>;
 
 my $DATE_FMT     = '%Y-%m-%d';
@@ -24,7 +24,7 @@ sub STOP_CMD { return 'stop'; }
 sub parse_event_line
 {
     my ($line) = @_;
-    my ( $stamp, $time, $task ) = $line =~ m<^
+    my ( $stamp, $time, $task ) = $line =~ m<\A
         ( $LAX_DATE_RE ) \s ( $TIME_RE )
         \s+(.*)          # the log entry
     \Z>x;
@@ -115,7 +115,7 @@ sub day_num_from_name
 sub is_datestamp
 {
     my ($stamp) = @_;
-    return scalar $stamp =~ m/^$LAX_DATE_RE$/;
+    return scalar ($stamp =~ m/\A$LAX_DATE_RE\z/);
 }
 
 sub canonical_datestamp
