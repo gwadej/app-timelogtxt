@@ -1,19 +1,20 @@
-App-TimelogTxt version 0.0.1
+App-TimelogTxt version 0.03
 
-[ REPLACE THIS...
+This is a modulized version of a script I've been using for the last few years
+to track my time spent on various projects at home and at work. It is based
+loosely on two other projects.
 
-  The README is used to introduce the module and provide instructions on
-  how to install the module, any machine dependencies it may have (for
-  example C compilers and installed libraries) and any other information
-  that should be understood before the module is installed.
+For well over a decade I used the program TEAK on Palm OS to track this
+information. Now that Palm is defunct, I needed something else. I've also been
+using Gina Trapani's Todo.txt tools to track my todo list. Her simple text file
+based design solved the biggest problem I had with the time logging software.
 
-  A README file is required for CPAN modules since CPAN extracts the
-  README file from a module distribution so that people browsing the
-  archive can use it get an idea of the modules uses. It is usually a
-  good idea to provide version information here so that people can
-  decide whether fixes for the module are worth downloading.
-]
+So the original timelog script was born. This program is the result of a few
+years of refining that design.
 
+In addition to the text-based format, I also stole the concept of configuration
+based aliases from git. This turns out to make the timelog tool much more
+useful.
 
 INSTALLATION
 
@@ -27,12 +28,11 @@ To install this module, run the following commands:
 
 DEPENDENCIES
 
-None.
-
+Time::Local, Getopt::Long, Config::Tiny, App::CmdDispatch.
 
 COPYRIGHT AND LICENCE
 
-Copyright (C) 2011, G. Wade Johnson
+Copyright (C) 2013, G. Wade Johnson
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
