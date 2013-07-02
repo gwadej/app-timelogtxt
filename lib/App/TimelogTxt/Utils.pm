@@ -6,7 +6,7 @@ use strict;
 use POSIX qw(strftime);
 use Time::Local;
 
-our $VERSION = '0.03';
+our $VERSION = '0.03_1';
 
 my $LAX_DATE_RE  = qr<[0-9]{4}[-/](?:0[1-9]|1[0-2])[-/](?:0[1-9]|[12][0-9]|3[01])>;
 my $TIME_RE      = qr<[01][0-9]:[0-5][0-9]:[0-6][0-9]>;
@@ -64,6 +64,7 @@ sub day_end
 sub stamp_to_localtime
 {
     my ( $stamp ) = @_;
+    return unless is_datestamp( $stamp );
     my @date = split /-/, $stamp;
     return unless @date == 3;
     $date[0] -= 1900;
@@ -130,119 +131,135 @@ __END__
 
 =head1 NAME
 
-ModName - [One line description of module's purpose here]
+App::TimelogTxt::Utils - Utility functions for the App::TimelogTxt modules.
 
 
 =head1 VERSION
 
-This document describes ModName version 0.03
+This document describes App::TimelogTxt::Utils version 0.03_1
 
 
 =head1 SYNOPSIS
 
-    use ModName;
+    use App::TimelogTxt::Utils;
 
-=for author to fill in:
-    Brief code example(s) here showing commonest usage(s).
-    This section will be as far as many users bother reading
-    so make it as educational and exeplary as possible.
-  
-  
+    my $t = App::TimelogTxt::Utils::stamp_to_localtime( $stamp );
+    my $estamp = App::TimelogTxt::Utils::day_end( $stamp );
+
 =head1 DESCRIPTION
 
-=for author to fill in:
-    Write a full description of the module and its features here.
-    Use subsections (=head2, =head3) as appropriate.
+This module collects a set of utility functions and constants into one place to
+avoid duplication in multiple modules or odd dependency loops. No effort has
+been made to have these utility functions be particularly useful to code
+outside this application.
 
+=head1 INTERFACE
 
-=head1 INTERFACE 
+=head2 canonical_datestamp( $stamp )
 
-=for author to fill in:
-    Write a separate section listing the public components of the modules
-    interface. These normally consist of either subroutines that may be
-    exported, or methods that may be called on objects belonging to the
-    classes provided by the module.
+Given a date stamp like string that has '/' instead of '-' as separators,
+convert to standard datestamp form: YYYY-MM-DD.
 
+=head2 day_end( $stamp )
 
-=head1 DIAGNOSTICS
+Given a properly formated datestamp, find the next datestamp after the one
+supplied.
 
-=for author to fill in:
-    List every single error and warning message that the module can
-    generate (even the ones that will "never happen"), with a full
-    explanation of each problem, one or more likely causes, and any
-    suggested remedies.
+=head2 day_num_from_name( $day_name )
 
-=over
+Given a day name in English, return the day number (0-6).
 
-=item C<< Error message here, perhaps with %s placeholders >>
+=head2 day_stamp( $day_str )
 
-[Description of error here]
+Return a properly formatted datestamp for the supplied string. This string may
+be any one of the following:
 
-=item C<< Another error message here >>
+=over 4
 
-[Description of error here]
+=item The empty string or 'today'
 
-[Et cetera, et cetera]
+Datestamp for today.
+
+=item 'yesterday'
+
+Datestamp for yesterday.
+
+=item 'monday', 'tuesday', etc.
+
+Datestamp for the most recent day named. For example, if today is Wednesday
+and the string 'tuesday' is supplied, yesterday's datestamp is returned.
+
+=item A datestamp
+
+The supplied datestamp is returned.
 
 =back
 
+=head2 fmt_date( $time )
+
+Return a properly formatted datestamp for the day corresponding to C<$time>
+in the local timezone.
+
+=head2 fmt_time( $time )
+
+Return a properly formatted datestamp plus time corresponding to C<$time>
+in the local timezone.
+
+=head2 is_datestamp( $stamp )
+
+Returns C<true> if C<$stamp> is a properly formatted datestamp.
+
+=head2 is_today( $day_str )
+
+Returns C<true> if C<$day_str> is either 'today' or the empty string.
+
+=head2 parse_event_line( $line )
+
+Parse the supplied string into the datestamp, time, and the rest of the line,
+if the string represents a proper event line.
+
+=head2 stamp_to_localtime( $stamp )
+
+Convert the datestamp to the last second of the day specified by C<$stamp> in
+the local timezone.
+
+=head2 STOP_CMD()
+
+This constant returns the string 'stop' used throughout the system as to
+represent the command that stops timing.
+
+=head2 TODAY()
+
+This constant returns the string 'today' used throughout the system to
+represent today.
+
+=head2 today_stamp()
+
+Return the datestamp for today.
 
 =head1 CONFIGURATION AND ENVIRONMENT
 
-=for author to fill in:
-    A full explanation of any configuration system(s) used by the
-    module, including the names and locations of any configuration
-    files, and the meaning of any environment variables or properties
-    that can be set. These descriptions must also include details of any
-    configuration language used.
-  
-ModName requires no configuration files or environment variables.
-
+App::TimelogTxt::Utils requires no configuration files or environment variables.
 
 =head1 DEPENDENCIES
 
-=for author to fill in:
-    A list of all the other modules that this module relies upon,
-    including any restrictions on versions, and an indication whether
-    the module is part of the standard Perl distribution, part of the
-    module's distribution, or must be installed separately. ]
-
-None.
-
+POSIX, Time::Local.
 
 =head1 INCOMPATIBILITIES
 
-=for author to fill in:
-    A list of any modules that this module cannot be used in conjunction
-    with. This may be due to name conflicts in the interface, or
-    competition for system or program resources, or due to internal
-    limitations of Perl (for example, many modules that use source code
-    filters are mutually incompatible).
-
 None reported.
 
-
 =head1 BUGS AND LIMITATIONS
-
-=for author to fill in:
-    A list of known problems with the module, together with some
-    indication Whether they are likely to be fixed in an upcoming
-    release. Also a list of restrictions on the features the module
-    does provide: data types that cannot be handled, performance issues
-    and the circumstances in which they may arise, practical
-    limitations on the size of data sets, special cases that are not
-    (yet) handled, etc.
 
 No bugs have been reported.
 
 =head1 AUTHOR
 
-G. Wade Johnson  C<< wade@anomaly.org >>
-
+G. Wade Johnson  C<< gwadej@cpan.org >>
 
 =head1 LICENCE AND COPYRIGHT
 
-Copyright (c) <YEAR>, G. Wade Johnson C<< wade@anomaly.org >>. All rights reserved.
+Copyright (c) 2013, G. Wade Johnson C<< gwadej@cpan.org >>. All rights reserved.
 
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself. See L<perlartistic>.
