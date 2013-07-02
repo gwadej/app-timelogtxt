@@ -5,6 +5,7 @@ lib/App/TimelogTxt.pm
 lib/App/TimelogTxt/Day.pm
 lib/App/TimelogTxt/Event.pm
 lib/App/TimelogTxt/File.pm
+lib/App/TimelogTxt/Format.pod
 lib/App/TimelogTxt/Stack.pm
 lib/App/TimelogTxt/Utils.pm
 Makefile.PL
