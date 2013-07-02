@@ -1,4 +1,4 @@
-#!/usr/bin/env perl
+#!/usr/bin/perl
 
 use Test::Most tests => 47;
 use Test::NoWarnings;

@@ -3,11 +3,14 @@ package App::TimelogTxt::Day;
 use warnings;
 use strict;
 
-our $VERSION = '0.03_1';
+use App::TimelogTxt::Utils;
+
+our $VERSION = '0.03_3';
 
 sub new {
     my ($class, $stamp) = @_;
     die "Missing required stamp.\n" unless $stamp;
+    die "Invalid stamp format.\n" unless App::TimelogTxt::Utils::is_datestamp( $stamp );
 
     return bless {
         stamp => $stamp,
@@ -19,12 +22,6 @@ sub new {
 }
 
 sub is_empty { return !$_[0]->{dur}; }
-
-sub set_start {
-    my ($self, $start) = @_;
-    $self->{start} ||= $start;
-    return;
-}
 
 sub update_dur {
     my ($self, $last, $epoch) = @_;
@@ -53,28 +50,17 @@ sub print_day_detail {
     my ($tasks, $proj_dur) = @{$self}{ qw/tasks proj_dur/ };
     my $last_proj = '';
 
-    print {$fh} "\n$self->{stamp} ", _format_dur( $self->{dur} ), "\n";
+    print {$fh} "\n", _format_stamp_line( $self );
     foreach my $t ( sort { ($tasks->{$a}->{proj} cmp $tasks->{$b}->{proj}) || ($tasks->{$b}->{start} <=> $tasks->{$a}->{start}) }  keys %{$tasks} )
     {
-        if( $tasks->{$t}->{proj} ne $last_proj )
+        my $curr = $tasks->{$t};
+        if( $curr->{proj} ne $last_proj )
         {
-            printf {$fh} '  %-13s%s',  $tasks->{$t}->{proj}, _format_dur( $proj_dur->{$tasks->{$t}->{proj}} ). "\n";
-            $last_proj = $tasks->{$t}->{proj};
+            print {$fh} _format_project_line( $curr->{proj}, $proj_dur->{$curr->{proj}} );
+            $last_proj = $curr->{proj};
         }
         my $task = $t;
-        $task =~ s/\+\S+\s//;
-        if ( $task =~ s/\@(\S+)\s*// )
-        {
-            if ( $task ) {
-                printf {$fh} "    %-20s%s (%s)\n", $1, _format_dur( $tasks->{$t}->{dur} ), $task;
-            }
-            else {
-                printf {$fh} "    %-20s%s\n", $1, _format_dur( $tasks->{$t}->{dur} );
-            }
-        }
-        else {
-            printf {$fh} "    %-20s%s\n", $task, _format_dur( $tasks->{$t}->{dur} );
-        }
+        print {$fh} _format_task_line( $t, $curr->{dur} );
     }
     return;
 }
@@ -85,10 +71,10 @@ sub print_day_summary {
 
     my $proj_dur = $self->{proj_dur};
 
-    print {$fh} "$self->{stamp} ", _format_dur( $self->{dur} ), "\n";
+    print {$fh}  _format_stamp_line( $self );
     foreach my $p ( sort keys %{$proj_dur} )
     {
-        printf {$fh} '  %-13s%s',  $p, _format_dur( $proj_dur->{$p} ). "\n";
+        print {$fh} _format_project_line( $p, $proj_dur->{$p} );
     }
     return;
 }
@@ -97,9 +83,7 @@ sub print_hours {
     my ($self, $fh) = @_;
     $fh ||= \*STDOUT;
 
-    my $proj_dur = $self->{proj_dur};
-
-    print {$fh} $self->{stamp}, ': ', _format_dur( $self->{dur} ), "\n";
+    print {$fh} _format_stamp_line( $self, ':' );
     return;
 }
 
@@ -107,7 +91,42 @@ sub _format_dur
 {
     my ($dur) = @_;
     $dur += 30; # round, don't truncate.
-    return sprintf '%2d:%02d', int($dur/3600), int(($dur%3600)/60);
+    return sprintf( '%2d:%02d', int($dur/3600), int(($dur%3600)/60) );
+}
+
+sub _format_stamp_line
+{
+    my ($self, $sep) = @_;
+    $sep ||= '';
+
+    return "$self->{stamp}$sep " . _format_dur( $self->{dur} ) . "\n";
+}
+
+sub _format_task_line
+{
+    my ($task, $dur) = @_;
+
+    $task =~ s/\+\S+\s//;
+    if ( $task =~ s/\@(\S+)\s*// )
+    {
+        if ( $task ) {
+            return sprintf( "    %-20s%s (%s)\n", $1, _format_dur( $dur ), $task );
+        }
+        else {
+            return sprintf( "    %-20s%s\n", $1, _format_dur( $dur ) );
+        }
+    }
+    else {
+        return sprintf( "    %-20s%s\n", $task, _format_dur( $dur ) );
+    }
+    return;
+}
+
+sub _format_project_line
+{
+    my ($proj, $dur) = @_;
+
+    return sprintf( '  %-13s%s',  $proj, _format_dur( $dur ). "\n" );
 }
 
 1;
@@ -120,31 +139,75 @@ durations.
 
 =head1 VERSION
 
-This document describes ModName version 0.03_1
+This document describes App::TimelogTxt::Day version 0.03_3
 
 =head1 SYNOPSIS
 
     use App::TimelogTxt::Day;
 
-=for author to fill in:
-    Brief code example(s) here showing commonest usage(s).
-    This section will be as far as many users bother reading
-    so make it as educational and exeplary as possible.
-
+    my $day = App::TimelogTxt::Day->new( '2013-07-02' );
+    my %last;
+    while( my $event = get_new_event() )
+    {
+        $day->update_dur( \%last, $event->epoch );
+        $day->start_task( $event );
+        %last = $event->snapshot;
+    }
+    $day->print_day_detail( \*STDOUT );
 
 =head1 DESCRIPTION
 
-=for author to fill in:
-    Write a full description of the module and its features here.
-    Use subsections (=head2, =head3) as appropriate.
+Objects of this class represent the events of a particular day. The object
+tracks projects and combines time spent on the same task from multiple points
+in the day.
+
+The class also provides the ability to print various reports on the day's
+activities.
 
 =head1 INTERFACE
 
-=for author to fill in:
-    Write a separate section listing the public components of the modules
-    interface. These normally consist of either subroutines that may be
-    exported, or methods that may be called on objects belonging to the
-    classes provided by the module.
+=head2 new( $stamp )
+
+Creates a Day object that collects the events for the date specified by
+the C<$stamp>. This C<$stamp> must be in the standard format YYYY-MM-DD
+
+=head2 $d->is_empty()
+
+Returns C<true> only if no events have been added to the day.
+
+=head2 $d->start_task( $event )
+
+Initialize a new task item in the day based on the L<App::TimelogTxt::Event>
+object supplied in C<$event>. This method only starts a task if no previous
+matching task exists in the day.
+
+=head2 $d->print_day_detail( $fh )
+
+Print formatted day information to the supplied filehandle C<$fh>. If no
+filehandle is supplied, print to C<STDOUT>.
+
+The output starts with the current datestamp and duration for the day. Indented
+under that are individual projects. Individual tasks are indented under the
+projects.
+
+This is the most detailed report.
+
+=head2 $d->print_day_summary( $fh )
+
+Print formatted day information to the supplied filehandle C<$fh>. If no
+filehandle is supplied, print to C<STDOUT>.
+
+The output starts with the current datestamp and duration for the day. Indented
+under that are individual projects.
+
+=head2 $d->print_hours( $fh )
+
+Print formatted day information to the supplied filehandle C<$fh>. If no
+filehandle is supplied, print to C<STDOUT>.
+
+The output only displays the current datestamp and duration for the day.
+
+This is the least detailed report.
 
 =head1 CONFIGURATION AND ENVIRONMENT
 

@@ -12,7 +12,7 @@ use App::TimelogTxt::Day;
 use App::TimelogTxt::File;
 use App::TimelogTxt::Event;
 
-our $VERSION = '0.03_2';
+our $VERSION = '0.03_3';
 
 
 my %config = (
@@ -120,7 +120,7 @@ if argument supplied.',
         $config->{editor} ||= $config{editor} || $ENV{'VISUAL'} || $ENV{'EDITOR'} || '/usr/bin/vim';
         $config->{dir}    ||= $config{dir} || "$ENV{HOME}/timelog";
         $config->{defcmd} ||= $config{defcmd} || App::TimelogTxt::Utils::STOP_CMD();
-        $config->{'dir'} =~ s/~/$ENV{HOME}/;
+        $config->{dir} =~ s/~/$ENV{HOME}/;
         foreach my $d ( [qw/logfile timelog.txt/], [qw/stackfile stack.txt/] )
         {
             $config->{ $d->[0] } = "$config->{'dir'}/$d->[1]";
@@ -276,7 +276,6 @@ sub extract_day_tasks
             push @summaries, $summary;
             $prev_stamp = $new_stamp;
         }
-        $summary->set_start( $event->epoch );
         $summary->update_dur( \%last, $event->epoch );
         $summary->start_task( $event );
         %last = ($event->is_stop() ? () : $event->snapshot );
@@ -343,7 +342,7 @@ sub list_stack
     my ($app) = @_;
     return unless -f $app->_stackfile;
     my $stack = _stack( $app );
-    $stack->list();
+    $stack->list( \*STDOUT );
     return;
 }
 
@@ -366,7 +365,7 @@ App::TimelogTxt - Core code for timelog utility.
 
 =head1 VERSION
 
-This document describes App::TimelogTxt version 0.03_2
+This document describes App::TimelogTxt version 0.03_3
 
 =head1 SYNOPSIS
 
@@ -376,20 +375,117 @@ This document describes App::TimelogTxt version 0.03_2
 =head1 DESCRIPTION
 
 This module encapsulates all of the functionality of the timelog application.
+This module delegates much of the heavy lifting to other modules. It does
+handle the UI work and the configuration file.
 
 =head1 INTERFACE
 
-=for author to fill in:
-    Write a separate section listing the public components of the modules
-    interface. These normally consist of either subroutines that may be
-    exported, or methods that may be called on objects belonging to the
-    classes provided by the module.
+At the moment, the only real interface to this file is the C<run> command.
+In case this becomes more generally useful somehow, I'll go ahead and document
+the other public methods.
 
+In the methods below, the C<$app> parameter is an object of the class
+C<Timelog::CmdDispatch>. This is a subclass of L<App::CmdDispatch> that adds
+support needed for some of our configuration.
+
+=head2 run()
+
+=head2 log_event( $app, @event );
+
+Add the specified event to the end of timelog.txt
+
+=head2 edit_logfile( $app )
+
+Implementation of the 'edit' command.
+
+=head2 list_events( $app, $day )
+
+Implementation of the 'ls' command.
+
+=head2 list_projects( $app )
+
+Implementation of the 'lsproj' command.
+
+=head2 daily_report( $app, $day, $end_day )
+
+Implementation of the 'report' command.
+
+=head2 daily_summary( $app, $day, $end_day )
+
+Implementation of the  'summary' command.
+
+=head2 report_hours( $app, $day, $end_day )
+
+Implementation of the 'hours' command.
+
+=head2 extract_day_tasks( $app, $day, $end_day )
+
+Read the timelog.txt file and create an array of L<App::TimelogTxt::Day>
+objects that contain the information for the days from C<$day> to C<$end_day>.
+
+=head2 start_event( $app, @event )
+
+Implementation of the 'start' command.
+
+=head2 push_event( $app, @event )
+
+Implementation of the 'push' command.
+
+=head2 pop_event( $app )
+
+Implementation of the 'pop' command.
+
+=head2 drop_event( $app, $arg )
+
+Implementation of the 'drop' command.
+
+=head2 list_stack( $app )
+
+Implementation of the 'lstk' command.
 
 =head1 CONFIGURATION AND ENVIRONMENT
 
 App::TimelogTxt requires no environment variables.
 App::TimelogTxt will use the file ~/.timelogrc if it exists.
+
+The configuration file is expected to contain data in two major parts:
+
+=head2 General Configuration
+
+The first section defined general configuration information in a key=value
+format. The recognized keys are:
+
+=over 4
+
+=item editor
+
+The editor to use when opening the timelog file with the C<edit> command.
+If not specified, it will use the value of either the VISUAL or EDITOR
+environment variables. If non are found, it will default to C<vim>.
+
+=item dir
+
+The directory in which to find the timelog data files. Defaults to the
+C<timelog> directory in the user's home directory.
+
+=item defcmd
+
+The default command to by used if none is supplied to timelog. By default,
+this is the 'stop' command.
+
+=back
+
+=head2 Command Aliases
+
+The config file may also contain an '[alias]' section that defines command
+aliases. Each alias is defined as a C<shortname=expanded string>
+
+For example, if you regularly need to make entries for reading email and
+triaging bug reports you might want the following in your configuration.
+
+  [alias]
+    email = start +Misc @Email
+    triage = start +BugTracker @Triage
 
 =head1 DEPENDENCIES
 
@@ -419,7 +515,6 @@ Copyright (c) 2013, G. Wade Johnson C<< <gwadej@cpan.org> >>. All rights reserve
 
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself. See L<perlartistic>.
-
 
 =head1 DISCLAIMER OF WARRANTY
 
