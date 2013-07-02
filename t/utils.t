@@ -6,6 +6,7 @@ use Test::NoWarnings;
 use strict;
 use warnings;
 
+use Time::Local;
 use App::TimelogTxt::Utils;
 
 is( App::TimelogTxt::Utils::TODAY(), 'today', 'Verify today constant' );
@@ -17,8 +18,9 @@ ok( !App::TimelogTxt::Utils::is_today( 'yesterday' ), 'Today check of yesterday 
 
 is( App::TimelogTxt::Utils::day_end( '2013-06-30 12:00:00' ), '2013-07-01', 'Day end is tomorrow' );
 
-is( App::TimelogTxt::Utils::stamp_to_localtime( '2013-06-30' ),
-    1372654799,
+# Monkey motion to remove problems with different local times
+is_deeply( App::TimelogTxt::Utils::stamp_to_localtime( '2013-06-30' ),
+    Time::Local::timelocal( 59, 59, 23, 30, 5, 113 ),
     'Timestamp converted to correct time'
 );
 
@@ -83,6 +85,6 @@ foreach my $dt (@days)
 my $DATE_RE = qr<\A[0-9]{4}-[01][0-9]-[0-3][0-9]\z>;
 
 foreach my $day ('', qw/today yesterday YESTERDAY/, '2013-06-30', map { $_->[0] } @days )
-{ 
+{
     like( App::TimelogTxt::Utils::day_stamp( $day ), $DATE_RE, "'$day' converted" );
 }
