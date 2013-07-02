@@ -16,7 +16,7 @@ ok( App::TimelogTxt::Utils::is_today( 'today' ), 'Today check succeeds' );
 ok( App::TimelogTxt::Utils::is_today( '' ), 'Today check of none succeeds' );
 ok( !App::TimelogTxt::Utils::is_today( 'yesterday' ), 'Today check of yesterday does not succeed' );
 
-is( App::TimelogTxt::Utils::day_end( '2013-06-30 12:00:00' ), '2013-07-01', 'Day end is tomorrow' );
+is( App::TimelogTxt::Utils::day_end( '2013-06-30' ), '2013-07-01', 'Day end is tomorrow' );
 
 # Monkey motion to remove problems with different local times
 is_deeply( App::TimelogTxt::Utils::stamp_to_localtime( '2013-06-30' ),

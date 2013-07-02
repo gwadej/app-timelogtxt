@@ -12,7 +12,7 @@ use App::TimelogTxt::Day;
 use App::TimelogTxt::File;
 use App::TimelogTxt::Event;
 
-our $VERSION = '0.03_1';
+our $VERSION = '0.03_2';
 
 
 my %config = (
@@ -366,7 +366,7 @@ App::TimelogTxt - Core code for timelog utility.
 
 =head1 VERSION
 
-This document describes App::TimelogTxt version 0.03_1
+This document describes App::TimelogTxt version 0.03_2
 
 =head1 SYNOPSIS
 
