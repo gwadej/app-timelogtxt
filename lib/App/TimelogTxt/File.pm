@@ -3,7 +3,7 @@ package App::TimelogTxt::File;
 use warnings;
 use strict;
 
-our $VERSION = '0.03';
+our $VERSION = '0.03_1';
 
 sub new {
     my ($class, $fh, $start, $end) = @_;
@@ -56,10 +56,9 @@ __END__
 
 App::TimelogTxt::File - Simplify reading part of the timelog.txt file
 
-
 =head1 VERSION
 
-This document describes App::TimelogTxt::File version 0.03
+This document describes App::TimelogTxt::File version 0.03_1
 
 =head1 SYNOPSIS
 
@@ -83,27 +82,9 @@ the readline function.
 
 =head2 readline()
 
-=head1 DIAGNOSTICS
-
-=over
-
-=item C<< Error message here, perhaps with %s placeholders >>
-
-[Description of error here]
-
-=item C<< Another error message here >>
-
-[Description of error here]
-
-[Et cetera, et cetera]
-
-=back
-
-
 =head1 CONFIGURATION AND ENVIRONMENT
 
 App::TimelogTxt::File requires no configuration files or environment variables.
-
 
 =head1 DEPENDENCIES
 
@@ -113,23 +94,20 @@ None.
 
 None reported.
 
-
 =head1 BUGS AND LIMITATIONS
 
 No bugs have been reported.
 
 =head1 AUTHOR
 
-G. Wade Johnson  C<< wade@anomaly.org >>
-
+G. Wade Johnson  C<< gwadej@cpan.org >>
 
 =head1 LICENCE AND COPYRIGHT
 
-Copyright (c) 2012, G. Wade Johnson C<< wade@anomaly.org >>. All rights reserved.
+Copyright (c) 2012, G. Wade Johnson C<< gwadej@cpan.org >>. All rights reserved.
 
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself. See L<perlartistic>.
-
 
 =head1 DISCLAIMER OF WARRANTY
 
