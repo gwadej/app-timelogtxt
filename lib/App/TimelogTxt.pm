@@ -269,7 +269,7 @@ sub extract_day_tasks
             my $new_stamp = $event->stamp;
             if( $summary and !$event->is_stop() )
             {
-                $summary->update_dur( \%last, $new_stamp );
+                $summary->update_dur( \%last, $event->epoch );
                 %last = ();
             }
             $summary = App::TimelogTxt::Day->new( $new_stamp );
