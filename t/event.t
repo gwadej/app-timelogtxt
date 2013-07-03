@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use Test::Most tests => 33;
+use Test::Most tests => 31;
 use Test::NoWarnings;
 
 use Time::Local;
@@ -58,13 +58,4 @@ my $REFERENCE_TIME = Time::Local::timelocal( 2, 0, 10, 5, 5, 113 );
     is( $event->epoch, $REFERENCE_TIME, "$label: epoch correct" );
     is( $event->to_string, '2013-06-05 10:00:02 stop', "$label: string correct" );
     ok( $event->is_stop, "$label: is a stop event" );
-}
-
-{
-    my $label = 'Snapshot test';
-    my $line = '2013-06-05 10:00:02 +proj1 do something';
-    my $event = App::TimelogTxt::Event->new_from_line( $line );
-    my $snap = { $event->snapshot() };
-    is( ref($snap), ref {}, "$label: Class removed" );
-    is_deeply( $snap, { %{$event} }, "$label: Attributes match" );
 }

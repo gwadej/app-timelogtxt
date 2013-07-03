@@ -5,7 +5,7 @@ use strict;
 use Time::Local;
 use App::TimelogTxt::Utils;
 
-our $VERSION = '0.03_1';
+our $VERSION = '0.03_3';
 
 sub new
 {
@@ -75,12 +75,6 @@ sub is_stop
 {
     my ($self) = @_;
     return ($_[0]->{task} eq App::TimelogTxt::Utils::STOP_CMD());
-}
-
-sub snapshot
-{
-    my ($self) = @_;
-    return %{$self};
 }
 
 1;

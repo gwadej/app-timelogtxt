@@ -25,10 +25,10 @@ sub is_empty { return !$_[0]->{dur}; }
 
 sub update_dur {
     my ($self, $last, $epoch) = @_;
-    my $curr_dur = $last->{epoch} ? $epoch - $last->{epoch} : 0;
+    my $curr_dur = $last ? $epoch - $last->epoch : 0;
 
-    $self->{tasks}->{$last->{task}}->{dur} += $curr_dur if $last->{task};
-    $self->{proj_dur}->{$last->{project}} += $curr_dur  if $last->{project};
+    $self->{tasks}->{$last->task}->{dur} += $curr_dur if $last && $last->task;
+    $self->{proj_dur}->{$last->project} += $curr_dur  if $last && $last->project;
     $self->{dur} += $curr_dur;
 
     return;
@@ -146,12 +146,12 @@ This document describes App::TimelogTxt::Day version 0.03_3
     use App::TimelogTxt::Day;
 
     my $day = App::TimelogTxt::Day->new( '2013-07-02' );
-    my %last;
+    my $last;
     while( my $event = get_new_event() )
     {
         $day->update_dur( \%last, $event->epoch );
         $day->start_task( $event );
-        %last = $event->snapshot;
+        $last = $event;
     }
     $day->print_day_detail( \*STDOUT );
 
@@ -174,6 +174,12 @@ the C<$stamp>. This C<$stamp> must be in the standard format YYYY-MM-DD
 =head2 $d->is_empty()
 
 Returns C<true> only if no events have been added to the day.
+
+=head2 $d->update_dur( $last, $epoch )
+
+Update the duration of the most recent task, using the C<$last> variable
+which contains the information from the last event and the C<$epoch> time
+from the new event.
 
 =head2 $d->start_task( $event )
 

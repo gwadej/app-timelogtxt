@@ -51,8 +51,8 @@ throws_ok { App::TimelogTxt::Day->new( 'foo' ) } qr/Invalid/, 'New with invalid 
     my $day = App::TimelogTxt::Day->new( '2012-06-30' );
     isa_ok( $day, 'App::TimelogTxt::Day', '$day' );
     my $time = 1372637679;
-    $day->update_dur( {}, $time );
-    $day->update_dur( { epoch => $time }, $time+600 );
+    $day->update_dur( undef, $time );
+    $day->update_dur( Mock::Event->new( $time, '', '' ), $time+600 );
 
     my $buffer = '';
     open my $fh, '>>', \$buffer or die "Unable to make file handle: $!\n";
@@ -65,7 +65,7 @@ throws_ok { App::TimelogTxt::Day->new( 'foo' ) } qr/Invalid/, 'New with invalid 
     my $stamp = '2013-07-02';
     my $day = App::TimelogTxt::Day->new( $stamp );
 
-    my %last;
+    my $last;
     my $start = Time::Local::timelocal( 0, 0, 10, 2, 6, 113 );
     my @tasks = (
         Mock::Event->new( $start,     'proj1', 'Make changes' ),
@@ -78,9 +78,9 @@ throws_ok { App::TimelogTxt::Day->new( 'foo' ) } qr/Invalid/, 'New with invalid 
     );
     foreach my $t (@tasks)
     {
-        $day->update_dur( \%last, $t->epoch );
+        $day->update_dur( $last, $t->epoch );
         $day->start_task( $t );
-        %last = %{$t};
+        $last = $t;
     }
 
     my $buffer = '';

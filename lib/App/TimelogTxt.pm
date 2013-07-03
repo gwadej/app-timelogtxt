@@ -14,7 +14,7 @@ use App::TimelogTxt::Event;
 
 our $VERSION = '0.03_3';
 
-
+# Initial configuration information.
 my %config = (
     editor => '',
     dir    => '',
@@ -22,6 +22,7 @@ my %config = (
 );
 my $config_file = "$ENV{HOME}/.timelogrc";
 
+# Dispatch table for commands
 my %commands = (
     'start' => {
         code     => \&start_event,
@@ -98,6 +99,8 @@ if argument supplied.',
     },
 );
 
+# Sub class of App::CmdDispatch that initializes configuration information
+# specific to this program. It also provides access to that configuration.
 {
     package Timelog::CmdDispatch;
     use base 'App::CmdDispatch';
@@ -158,6 +161,8 @@ or a day name: yesterday, today, or sunday .. saturday.\n",
     return;
 }
 
+# Command handlers
+
 sub log_event
 {
     my $app    = shift;
@@ -171,14 +176,6 @@ sub edit_logfile
 {
     my ( $app ) = @_;
     system $app->get_config()->{'editor'}, $app->_logfile;
-    return;
-}
-
-sub _each_logline
-{
-    my ( $app, $code ) = @_;
-    open my $fh, '<', $app->_logfile;
-    $code->() while( <$fh> );
     return;
 }
 
@@ -245,67 +242,11 @@ sub report_hours
     return;
 }
 
-sub extract_day_tasks
-{
-    my ( $app, $day, $eday ) = @_;
-
-    my $stamp = App::TimelogTxt::Utils::day_stamp( $day );
-    die "No day provided.\n" unless defined $stamp;
-    my $estamp = App::TimelogTxt::Utils::day_end( $eday ? App::TimelogTxt::Utils::day_stamp( $eday ) : $stamp );
-    my ( $summary, %last, @summaries );
-    my $event;
-    my $prev_stamp = '';
-
-    open my $fh, '<', $app->_logfile;
-    my $file = App::TimelogTxt::File->new( $fh, $stamp, $estamp );
-
-    while( defined( $_ = $file->readline ) )
-    {
-        eval {
-            $event = App::TimelogTxt::Event->new_from_line( $_ );
-        } or next;
-        if( $prev_stamp ne $event->stamp )
-        {
-            my $new_stamp = $event->stamp;
-            if( $summary and !$event->is_stop() )
-            {
-                $summary->update_dur( \%last, $event->epoch );
-                %last = ();
-            }
-            $summary = App::TimelogTxt::Day->new( $new_stamp );
-            push @summaries, $summary;
-            $prev_stamp = $new_stamp;
-        }
-        $summary->update_dur( \%last, $event->epoch );
-        $summary->start_task( $event );
-        %last = ($event->is_stop() ? () : $event->snapshot );
-    }
-
-    return [] unless $summary;
-
-    my $end_time = ( App::TimelogTxt::Utils::is_today( $day ) and !$event->is_stop() )
-        ? time
-        : App::TimelogTxt::Utils::stamp_to_localtime( $estamp );
-
-    $summary->update_dur( \%last, $end_time );
-
-    return if $summary->is_empty;
-
-    return \@summaries;
-}
-
 sub start_event
 {
     my ( $app, @event ) = @_;
     log_event( $app, @event );
     return;
-}
-
-sub _stack
-{
-    my ($app) = @_;
-    require App::TimelogTxt::Stack;
-    return App::TimelogTxt::Stack->new( $app->_stackfile );
 }
 
 sub push_event
@@ -344,6 +285,75 @@ sub list_stack
     my $stack = _stack( $app );
     $stack->list( \*STDOUT );
     return;
+}
+
+# Extract the daily events from the timelog.txt file and generate the list of Day
+# objects that encapsulates them.
+
+sub extract_day_tasks
+{
+    my ( $app, $day, $eday ) = @_;
+
+    my $stamp = App::TimelogTxt::Utils::day_stamp( $day );
+    die "No day provided.\n" unless defined $stamp;
+    my $estamp = App::TimelogTxt::Utils::day_end( $eday ? App::TimelogTxt::Utils::day_stamp( $eday ) : $stamp );
+    my ( $summary, $last, @summaries );
+    my $prev_stamp = '';
+
+    open my $fh, '<', $app->_logfile;
+    my $file = App::TimelogTxt::File->new( $fh, $stamp, $estamp );
+
+    use Data::Dumper;
+    while( defined( my $line = $file->readline ) )
+    {
+        my $event;
+        eval {
+            $event = App::TimelogTxt::Event->new_from_line( $line );
+        } or next;
+        if( $prev_stamp ne $event->stamp )
+        {
+            my $new_stamp = $event->stamp;
+            if( $summary and !$event->is_stop() )
+            {
+                $summary->update_dur( $last, $event->epoch );
+                $last = undef;
+            }
+            $summary = App::TimelogTxt::Day->new( $new_stamp );
+            push @summaries, $summary;
+            $prev_stamp = $new_stamp;
+        }
+        $summary->update_dur( $last, $event->epoch );
+        $summary->start_task( $event );
+        $last = ($event->is_stop() ? undef : $event );
+    }
+
+    return [] unless $summary;
+    my $end_time = ( App::TimelogTxt::Utils::is_today( $day ) and !($last and $last->is_stop()) )
+        ? time
+        : App::TimelogTxt::Utils::stamp_to_localtime( $estamp );
+
+    $summary->update_dur( $last, $end_time );
+
+    return if $summary->is_empty;
+
+    return \@summaries;
+}
+
+# Utility functions
+
+sub _each_logline
+{
+    my ( $app, $code ) = @_;
+    open my $fh, '<', $app->_logfile;
+    $code->() while( <$fh> );
+    return;
+}
+
+sub _stack
+{
+    my ($app) = @_;
+    require App::TimelogTxt::Stack;
+    return App::TimelogTxt::Stack->new( $app->_stackfile );
 }
 
 sub _get_last_event
