@@ -119,17 +119,29 @@ if argument supplied.',
     {
         my ($self) = @_;
         my $config = $self->get_config();
+        my $home = _home();
 
         $config->{editor} ||= $config{editor} || $ENV{'VISUAL'} || $ENV{'EDITOR'} || '/usr/bin/vim';
-        $config->{dir}    ||= $config{dir} || "$ENV{HOME}/timelog";
+        $config->{dir}    ||= $config{dir} || "$home/timelog";
         $config->{defcmd} ||= $config{defcmd} || App::TimelogTxt::Utils::STOP_CMD();
-        $config->{dir} =~ s/~/$ENV{HOME}/;
+        $config->{dir} =~ s/~/$home/;
         foreach my $d ( [qw/logfile timelog.txt/], [qw/stackfile stack.txt/] )
         {
             $config->{ $d->[0] } = "$config->{'dir'}/$d->[1]";
-            $config->{ $d->[0] } =~ s/~/$ENV{HOME}/;
+            $config->{ $d->[0] } =~ s/~/$home/;
         }
         return;
+    }
+
+    sub _home
+    {
+        return $ENV{HOME} if defined $ENV{HOME};
+        if( $^O eq 'MSWin32' )
+        {
+            return "$ENV{HOMEDRIVE}$ENV{HOMEPATH}" if defined $ENV{HOMEPATH};
+            return $ENV{USERPROFILE} if defined $ENV{USERPROFILE};
+        }
+        return '/';
     }
 }
 
