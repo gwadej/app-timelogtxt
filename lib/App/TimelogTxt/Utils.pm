@@ -12,7 +12,7 @@ my $LAX_DATE_RE  = qr<[0-9]{4}[-/](?:0[1-9]|1[0-2])[-/](?:0[1-9]|[12][0-9]|3[01]
 my $TIME_RE      = qr<(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-6][0-9]>;
 
 my $DATE_FMT     = '%Y-%m-%d';
-my $DATETIME_FMT = "$DATE_FMT %T";
+my $DATETIME_FMT = "$DATE_FMT %H:%M:%S";
 my $ONE_DAY      = 86400;
 my $TODAY        = 'today';
 my $YESTERDAY    = 'yesterday';
