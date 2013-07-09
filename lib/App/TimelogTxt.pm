@@ -28,19 +28,19 @@ my %commands = (
         code     => \&start_event,
         clue     => 'start {event description}',
         abstract => 'Start timing a new event.',
-        help     => 'Stop last event and start timing a new event.',
+        help     => 'Stop the current event and start timing a new event.',
     },
     App::TimelogTxt::Utils::STOP_CMD() => {
         code => sub { my $app = shift; log_event( $app, App::TimelogTxt::Utils::STOP_CMD() ); },
         clue => App::TimelogTxt::Utils::STOP_CMD(),
-        abstract => 'Stop timing last event.',
-        help     => 'Stop timing last event.',
+        abstract => 'Stop timing the current event.',
+        help     => 'Stop timing the current event.',
     },
     'push' => {
         code     => \&push_event,
         clue     => 'push {event description}',
-        abstract => 'Save current event and start timing new.',
-        help     => 'Save last event on stack and start timing new event.',
+        abstract => 'Save the current event and start timing new.',
+        help     => 'Save the current event on stack and start timing new event.',
     },
     'pop' => {
         code     => \&pop_event,
@@ -52,7 +52,7 @@ my %commands = (
         code     => \&drop_event,
         clue     => 'drop [all|{n}]',
         abstract => 'Drop items from stack.',
-        help     => 'Drop one or more items from top of event stack, or all
+        help     => 'Drop one or more events from top of event stack, or all
 if argument supplied.',
     },
     'ls' => {
