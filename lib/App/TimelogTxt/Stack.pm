@@ -4,7 +4,7 @@ use warnings;
 use strict;
 use autodie;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 sub new
 {
@@ -41,6 +41,7 @@ sub _pop
     open my $fh, '+<', $self->{file};
     my ($line, $pos) = _find_last_line( $fh );
     return unless defined $line;
+
     seek( $fh, $pos, 0 );
     truncate( $fh, $pos );
     return $line;
@@ -74,6 +75,7 @@ sub _find_last_line
         ( $lastpos, $lastline ) = ( $pos, $line );
     }
     return unless defined $lastline;
+
     chomp $lastline;
     return ($lastline, $lastpos);
 }
@@ -92,12 +94,14 @@ sub list
     my ($self, $ofh) = @_;
     $ofh ||= \*STDOUT;
     return unless -f $self->{file};
+
     open my $fh, '<', $self->{file};
     print {$ofh} reverse <$fh>;
     return;
 }
 
 1;
+
 __END__
 
 =head1 NAME
@@ -106,17 +110,16 @@ App::TimelogTxt::Stack - Interface to the stack file for the timelog application
 
 =head1 VERSION
 
-This document describes App::TimelogTxt::Stack version 0.03_1
+This document describes App::TimelogTxt::Stack version 0.04
 
 =head1 SYNOPSIS
 
-    use ModName;
+    use App::TimelogTxt::Stack;
 
-=for author to fill in:
-    Brief code example(s) here showing commonest usage(s).
-    This section will be as far as many users bother reading
-    so make it as educational and exeplary as possible.
+    my $stack = App::TimelogTxt::Stack->new( 'timelog/stack.txt' );
 
+    $stack->push( '+Project @Task More detail' );
+    my $event = $stack->pop();
 
 =head1 DESCRIPTION
 
@@ -129,15 +132,31 @@ This document describes App::TimelogTxt::Stack version 0.03_1
 
 =head2 new( $filename )
 
+Create an C<App::TimelogTxt::Stack> object wrapping the supplied file.
+
 =head2 $s->clear()
 
-=head2 $s->push( $task )
+Truncate the stack file, removing all items from the stack.
 
-=head2 $task = $s->pop()
+=head2 $s->push( $event )
+
+Add a new event to the stack file.
+
+=head2 $event = $s->pop()
+
+Remove the most recent event from the stack file and return the event string.
 
 =head2 $s->drop( $arg )
 
+Remove one or more events from the stack file. If C<$arg> is not supplied,
+remove one item. If C<$arg> is a positive number, remove that many items
+from the stack. If C<$arg> is the string C<'all'>, clear the stack.
+
 =head2 $s->list( $fh )
+
+Print the stack to the supplied filehandle. If no filehandle is supplied, use
+C<STDOUT>. The stack will be printed such that the most recent item is listed
+first.
 
 =head1 CONFIGURATION AND ENVIRONMENT
 

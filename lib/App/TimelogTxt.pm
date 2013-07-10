@@ -11,8 +11,9 @@ use App::TimelogTxt::Utils;
 use App::TimelogTxt::Day;
 use App::TimelogTxt::File;
 use App::TimelogTxt::Event;
+use Cwd ();
 
-our $VERSION = '0.03_3';
+our $VERSION = '0.04';
 
 # Initial configuration information.
 my %config = (
@@ -20,7 +21,8 @@ my %config = (
     dir    => '',
     defcmd => '',
 );
-my $config_file = Timelog::CmdDispatch::_home() . "/.timelogrc";
+
+my $config_file =  _normalize_path( '~/.timelogrc' );
 
 # Dispatch table for commands
 my %commands = (
@@ -126,30 +128,18 @@ if argument supplied.',
     {
         my ($self) = @_;
         my $config = $self->get_config();
-        my $home = _home();
 
-        $config->{editor} ||= $config{editor} || $ENV{'VISUAL'} || $ENV{'EDITOR'} || '/usr/bin/vim';
-        $config->{dir}    ||= $config{dir} || "$home/timelog";
+        $config->{editor} ||= $config{editor} || $ENV{'VISUAL'} || $ENV{'EDITOR'} || 'vim';
+        $config->{dir}    ||= $config{dir} || App::TimelogTxt::_normalize_path( '~/timelog' );
         $config->{defcmd} ||= $config{defcmd} || App::TimelogTxt::Utils::STOP_CMD();
-        $config->{dir} =~ s/~/$home/;
+        $config->{dir} = App::TimelogTxt::_normalize_path( $config->{'dir'} );
         foreach my $d ( [qw/logfile timelog.txt/], [qw/stackfile stack.txt/] )
         {
             $config->{ $d->[0] } = "$config->{'dir'}/$d->[1]";
-            $config->{ $d->[0] } =~ s/~/$home/;
         }
         return;
     }
 
-    sub _home
-    {
-        return $ENV{HOME} if defined $ENV{HOME};
-        if( $^O eq 'MSWin32' )
-        {
-            return "$ENV{HOMEDRIVE}$ENV{HOMEPATH}" if defined $ENV{HOMEPATH};
-            return $ENV{USERPROFILE} if defined $ENV{USERPROFILE};
-        }
-        return '/';
-    }
 }
 
 sub run
@@ -188,12 +178,13 @@ sub init_timelog
     require File::Path;
     my $config = $app->get_config();
     $dir //= $config->{'dir'};
+    $dir = _normalize_path( $dir );
     File::Path::mkpath( $dir ) unless -d $dir;
     unless( -f $config_file )
     {
         open my $fh, '>', $config_file;
+        # don't supply the editor value, default to the environment
         print {$fh} <<"EOF";
-editor=$config->{editor}
 dir=$dir
 defcmd=$config->{defcmd}
 
@@ -354,10 +345,12 @@ sub extract_day_tasks
         if( $prev_stamp ne $event->stamp )
         {
             my $new_stamp = $event->stamp;
-            if( $summary and !$event->is_stop() )
+            if( $summary and !$summary->is_complete() )
             {
-                $summary->update_dur( $last, $event->epoch );
-                $last = undef;
+                $summary->close_day( $last );
+                # Need to build a new last item beginning at midnight for the
+                # Previous event.
+                $last = App::TimelogTxt::Event->new( $last->task(), $summary->day_end()+1 );
             }
             $summary = App::TimelogTxt::Day->new( $new_stamp );
             push @summaries, $summary;
@@ -381,6 +374,29 @@ sub extract_day_tasks
 }
 
 # Utility functions
+
+# Find user's home directory
+sub _home
+{
+    return $ENV{HOME} if defined $ENV{HOME};
+    if( $^O eq 'MSWin32' )
+    {
+        return "$ENV{HOMEDRIVE}$ENV{HOMEPATH}" if defined $ENV{HOMEPATH};
+        return $ENV{USERPROFILE} if defined $ENV{USERPROFILE};
+    }
+    return '/';
+}
+
+# Resolve ~ notation and convert to an absolute path.
+sub _normalize_path
+{
+    my ($path) = @_;
+
+    my $home = _home();
+    $path =~ s/~/$home/;
+
+    return Cwd::abs_path( $path );
+}
 
 sub _each_logline
 {
@@ -416,7 +432,7 @@ App::TimelogTxt - Core code for timelog utility.
 
 =head1 VERSION
 
-This document describes App::TimelogTxt version 0.03_3
+This document describes App::TimelogTxt version 0.04
 
 =head1 SYNOPSIS
 
@@ -432,14 +448,24 @@ handle the UI work and the configuration file.
 =head1 INTERFACE
 
 At the moment, the only real interface to this file is the C<run> command.
-In case this becomes more generally useful somehow, I'll go ahead and document
-the other public methods.
 
 In the methods below, the C<$app> parameter is an object of the class
 C<Timelog::CmdDispatch>. This is a subclass of L<App::CmdDispatch> that adds
 support needed for some of our configuration.
 
 =head2 run()
+
+This is the main routine of the module. It creates the command parser object,
+parses the command line and dispatches the work to the correct function.
+
+=head2 init_timelog( $app, $dir )
+
+Implementation of the 'init' command.
+
+This routine creates the log directory if the directory doesn't exist. The
+optional C<$dir> argument is the path to this directory. If C<$dir> is not
+provided, use the default F<~/timelog> directory. If the configuration file
+doesn't exist, it creates that as well using the currently known values.
 
 =head2 log_event( $app, @event );
 
@@ -449,25 +475,45 @@ Add the specified event to the end of timelog.txt
 
 Implementation of the 'edit' command.
 
+Open the F<timelog.txt> file in the configured editor.
+
 =head2 list_events( $app, $day )
 
 Implementation of the 'ls' command.
+
+Display the events for the supplied C<$day>. If no C<$day> is supplied, use
+today.
 
 =head2 list_projects( $app )
 
 Implementation of the 'lsproj' command.
 
+Extract all C<+project> entries from the events in F<timelog.txt> and display
+a sorted list, one per line.
+
 =head2 daily_report( $app, $day, $end_day )
 
 Implementation of the 'report' command.
+
+Display a report of all events for the given days on STDOUT. If C<$end_day> is
+not supplied, only display the report for C<$day>. If C<$day> is not supplied,
+default to today.
 
 =head2 daily_summary( $app, $day, $end_day )
 
 Implementation of the  'summary' command.
 
+Display a report of all project times for the given days on STDOUT. If
+C<$end_day> is not supplied, only display the report for C<$day>. If C<$day> is
+not supplied, default to today.
+
 =head2 report_hours( $app, $day, $end_day )
 
 Implementation of the 'hours' command.
+
+Display a report of the hours the given days on STDOUT. If C<$end_day> is not
+supplied, only display the report for C<$day>. If C<$day> is not supplied,
+default to today.
 
 =head2 extract_day_tasks( $app, $day, $end_day )
 
@@ -478,26 +524,42 @@ objects that contain the information for the days from C<$day> to C<$end_day>.
 
 Implementation of the 'start' command.
 
+Add an event to the F<timelog.txt> file.
+
 =head2 push_event( $app, @event )
 
 Implementation of the 'push' command.
+
+Copy the current item from the timelog file to the stack and add the supplied
+event to the timelog file.
 
 =head2 pop_event( $app )
 
 Implementation of the 'pop' command.
 
+Remove the most recent event from the stack and add it as a new event to the
+timelog file.
+
 =head2 drop_event( $app, $arg )
 
 Implementation of the 'drop' command.
+
+Remove one or more items from the stack. If C<$arg> is not supplied, remove one
+item. If C<$arg> is a positive number, remove that many items from the stack.
+If C<$arg> is C<'all'>, clear the stack file.
 
 =head2 list_stack( $app )
 
 Implementation of the 'lstk' command.
 
+Print the current stack on STDOUT.
+
 =head1 CONFIGURATION AND ENVIRONMENT
 
-App::TimelogTxt requires no environment variables.
-App::TimelogTxt will use the file ~/.timelogrc if it exists.
+App::TimelogTxt requires no environment variables, but may use VISUAL or
+EDITOR if an editor is not configured in F<~/.timelogrc>.
+
+App::TimelogTxt uses the file F<~/.timelogrc> for configuration information.
 
 The configuration file is expected to contain data in two major parts:
 
@@ -511,7 +573,7 @@ format. The recognized keys are:
 =item editor
 
 The editor to use when opening the timelog file with the C<edit> command.
-If not specified, it will use the value of either the VISUAL or EDITOR
+If not specified, it will use the value of either the C<VISUAL> or C<EDITOR>
 environment variables. If non are found, it will default to C<vim>.
 
 =item dir
@@ -522,7 +584,7 @@ C<timelog> directory in the user's home directory.
 =item defcmd
 
 The default command to by used if none is supplied to timelog. By default,
-this is the 'stop' command.
+this is the 'B<stop>' command.
 
 =back
 
@@ -540,7 +602,7 @@ triaging bug reports you might want the following in your configuration.
 
 =head1 DEPENDENCIES
 
-App::CmdDispatch, Getopt::Long, autodie.
+App::CmdDispatch, Getopt::Long, File::Path, autodie.
 
 =head1 INCOMPATIBILITIES
 
@@ -554,11 +616,9 @@ Please report any bugs or feature requests to
 C<bug-app-timelogtxt@rt.cpan.org>, or through the web interface at
 L<http://rt.cpan.org>.
 
-
 =head1 AUTHOR
 
 G. Wade Johnson  C<< <gwadej@cpan.org> >>
-
 
 =head1 LICENCE AND COPYRIGHT
 

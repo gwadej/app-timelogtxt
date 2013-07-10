@@ -5,7 +5,7 @@ use strict;
 
 use App::TimelogTxt::Utils;
 
-our $VERSION = '0.03_3';
+our $VERSION = '0.04';
 
 sub new {
     my ($class, $stamp) = @_;
@@ -18,10 +18,12 @@ sub new {
         dur => 0,
         tasks => {},
         proj_dur => {},
+        last_start => 0,
     }, $class;
 }
 
-sub is_empty { return !$_[0]->{dur}; }
+sub is_empty    { return !$_[0]->{dur}; }
+sub is_complete { return !$_[0]->{last_start}; }
 
 sub update_dur {
     my ($self, $last, $epoch) = @_;
@@ -34,10 +36,25 @@ sub update_dur {
     return;
 }
 
+sub close_day
+{
+    my ($self, $last) = @_;
+    return if $self->is_complete();
+
+    $self->update_dur( $last, $self->deay_end() );
+    $self->{last_start} = 0;
+    return;
+}
+
 sub start_task {
     my ($self, $event) = @_;
-    return if $event->is_stop();
+    if( $event->is_stop() )
+    {
+        $self->{last_start} = 0;
+        return;
+    }
     my $task = $event->task;
+    $self->{last_start} = $event->epoch;
     return if $self->{tasks}->{$task};
     $self->{tasks}->{$task} = { start => $event->epoch, proj => $event->project, dur => 0 };
     return;
@@ -87,6 +104,13 @@ sub print_hours {
     return;
 }
 
+sub day_end
+{
+    my ($self) = @_;
+
+    return App::TimelogTxt::Utils::stamp_to_localtime( $self->{stamp} );
+}
+
 sub _format_dur
 {
     my ($dur) = @_;
@@ -134,12 +158,12 @@ __END__
 
 =head1 NAME
 
-App::TimelogTxt::Day - Class representing a day as a set of times, tasks, and
+App::TimelogTxt::Day - Class representing a day as a set of times, events, and
 durations.
 
 =head1 VERSION
 
-This document describes App::TimelogTxt::Day version 0.03_3
+This document describes App::TimelogTxt::Day version 0.04
 
 =head1 SYNOPSIS
 
@@ -181,6 +205,12 @@ Update the duration of the most recent task, using the C<$last> variable
 which contains the information from the last event and the C<$epoch> time
 from the new event.
 
+=head2 $d->close_day( $last )
+
+Update the duration of the most recent task, using the C<$last> variable
+which contains the information from the last event and the end of the
+day time.
+
 =head2 $d->start_task( $event )
 
 Initialize a new task item in the day based on the L<App::TimelogTxt::Event>
@@ -213,6 +243,10 @@ filehandle is supplied, print to C<STDOUT>.
 
 The output only displays the current datestamp and duration for the day.
 
+=head2 $d->day_end()
+
+Return the epoch time for the last second of the associated date.
+
 This is the least detailed report.
 
 =head1 CONFIGURATION AND ENVIRONMENT
@@ -242,7 +276,6 @@ Copyright (c) 2013, G. Wade Johnson C<< gwadej@cpan.org >>. All rights reserved.
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself. See L<perlartistic>.
 
-
 =head1 DISCLAIMER OF WARRANTY
 
 BECAUSE THIS SOFTWARE IS LICENSED FREE OF CHARGE, THERE IS NO WARRANTY
@@ -265,4 +298,3 @@ RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR THIRD PARTIES OR A
 FAILURE OF THE SOFTWARE TO OPERATE WITH ANY OTHER SOFTWARE), EVEN IF
 SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF
 SUCH DAMAGES.
-

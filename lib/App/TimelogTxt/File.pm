@@ -3,7 +3,7 @@ package App::TimelogTxt::File;
 use warnings;
 use strict;
 
-our $VERSION = '0.03_1';
+our $VERSION = '0.04';
 
 sub new {
     my ($class, $fh, $start, $end) = @_;
@@ -58,7 +58,7 @@ App::TimelogTxt::File - Simplify reading part of the timelog.txt file
 
 =head1 VERSION
 
-This document describes App::TimelogTxt::File version 0.03_1
+This document describes App::TimelogTxt::File version 0.04
 
 =head1 SYNOPSIS
 
@@ -80,7 +80,14 @@ the readline function.
 
 =head2 new( $file, $start, $end )
 
-=head2 readline()
+Create an object representing part of a file. The C<$file> argument gives the
+file path. The C<$start> and C<$end> parameters specify the markers for the 
+starting and ending parts of the file.
+
+=head2 $f->readline()
+
+Return the next line from the file that meets the criteria. Returns C<undef>
+once we reach either the end of file or the C<$end> marker.
 
 =head1 CONFIGURATION AND ENVIRONMENT
 
@@ -131,4 +138,3 @@ RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR THIRD PARTIES OR A
 FAILURE OF THE SOFTWARE TO OPERATE WITH ANY OTHER SOFTWARE), EVEN IF
 SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF
 SUCH DAMAGES.
-

@@ -5,7 +5,7 @@ use strict;
 use Time::Local;
 use App::TimelogTxt::Utils;
 
-our $VERSION = '0.03_3';
+our $VERSION = '0.04';
 
 sub new
 {
@@ -86,32 +86,63 @@ App::TimelogTxt::Event - Class representing an event to log.
 
 =head1 VERSION
 
-This document describes ModName version 0.03_1
+This document describes ModName version 0.04
 
 =head1 SYNOPSIS
 
-    use ModName;
+    use App::TimelogTxt::Event;
 
-=for author to fill in:
-    Brief code example(s) here showing commonest usage(s).
-    This section will be as far as many users bother reading
-    so make it as educational and exeplary as possible.
-
+    my @events;
+    while(<>)
+    {
+        my $event = App::TimelogTxt::Event->new_from_line( $_ );
+        if( $event->stamp eq $wanted_stamp )
+        {
+            push @events, $event;
+        }
+    }
 
 =head1 DESCRIPTION
 
-=for author to fill in:
-    Write a full description of the module and its features here.
-    Use subsections (=head2, =head3) as appropriate.
-
+Objects of this class represent the individual lines in the F<timelog.txt> file.
+Each event has a date and time stamp, an optional project, and a task.
 
 =head1 INTERFACE
 
-=for author to fill in:
-    Write a separate section listing the public components of the modules
-    interface. These normally consist of either subroutines that may be
-    exported, or methods that may be called on objects belonging to the
-    classes provided by the module.
+=head2 new( $task, $time )
+
+Create a new object representing the supplied C<$task> at the supplied epoch
+C<$time>. If no C<$time> is supplied, use the current time.
+
+=head2 new_from_line( $line )
+
+Create a new object representing the event from the supplied line. This event
+must be formatted as described in L<App::TimelogTxt::Format>.
+
+=head2 $event->task()
+
+Return a string containing all of the event except the time and date.
+
+=head2 $event->project()
+
+Return the string designated as the project, if any, from the event.
+
+=head2 $event->to_string()
+
+Return a string representing the event, formatted as described in
+L<App::TimelogTxt::Format>.
+
+=head2 $event->epoch()
+
+Return the time for the start of the event in epoch seconds.
+
+=head2 $event->stamp()
+
+Return the date stamp of the event in 'YYYY-MM-DD' format.
+
+=head2 $event->is_stop()
+
+Return C<true> if this was a stop event.
 
 =head1 CONFIGURATION AND ENVIRONMENT
 
@@ -162,4 +193,3 @@ RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR THIRD PARTIES OR A
 FAILURE OF THE SOFTWARE TO OPERATE WITH ANY OTHER SOFTWARE), EVEN IF
 SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF
 SUCH DAMAGES.
-

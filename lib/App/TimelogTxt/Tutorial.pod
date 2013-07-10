@@ -8,18 +8,21 @@ This tutorial applies to L<App::TimelogTxt> version 0.04.
 
 =head1 Getting Started
 
-To use the C<timelog> program, you will need a directory where C<timelog> stores
-its log files. This directory may be specified in the F<.timelogrc> configuration
-in your home directory. If that file does not exist, the program defaults to the
-F<timelog> directory in your home directory.
+To use the C<timelog> program, you need a directory where C<timelog> stores its
+log files. This directory may be specified in the F<.timelogrc> configuration
+file in your home directory. If that file does not exist, the program defaults
+to the F<timelog> directory in your home directory.
 
-The B<init> command performs this initialization for you. If the default
-configuration is satisfactory, just run the following command:
+You can use the B<init> command to set up the configuration file and directory
+for you. If the default configuration is satisfactory, just run the following
+command:
 
   $ timelog init
 
 If you would like to change the directory where the logs are stored, supply
 that directory path as an argument to the B<init> command.
+
+  $ timelog init ~/my_timelog
 
 =head1 Example Usage
 
@@ -27,8 +30,9 @@ In this example, we will see most of the C<timelog> commands you would use in a
 normal day. The B<start> and B<stop> commands are the minimum that you would
 need. To begin tracking a task, you use the B<start> command and supply text to
 describe the task you are beginning. The C<timelog> software assumes that you
-are only working a single thing at a time. I originally tried to support that
-ability and found that I never actually used it.
+are only working a single thing at a time. I originally tried to support the
+ability to track more than one task at a time and found that I never actually
+used it.
 
 Let's walk through an example. Assume that it's just after lunch and you want
 to take care of your email before your team meeting at 1pm. At 10 minutes to 1,
@@ -46,8 +50,9 @@ the command.
 
    $ timelog start +Foo @ConfCall Team Meeting
 
-During the meeting, you agreed to do some general work on the manual for the
-project's software. Enter the task to begin working on that.
+The meeting is over and you need to change tasks. During the meeting, you
+agreed to do some general work on the manual for the project's software. Enter
+the task to begin working on that.
 
    $ timelog start +Foo @Docs working on manual
 
@@ -59,7 +64,8 @@ current task, so that we can restore it when the interruption is over.
 
    $ timelog push +Bar @Help Sue questions
 
-When Sue is satisfied, you want to go back to the manual work.
+When all of Sue's questions are answered, you want to go back to the manual
+work.
 
    $ timelog pop
 
@@ -84,7 +90,7 @@ reports of your work.
 
 =head2 Reports
 
-The most detailed report you might do is to list all of the entries for a given
+The most detailed report you might do is to list all of the events for a given
 day. If you executed the following command the day after the example above, you
 would get a list of the tasks for that day.
 
@@ -102,7 +108,7 @@ look like this:
     2013-07-01 17:00:24 stop
 
 This is the most detailed report, but it isn't really useful for much. Usually,
-you want some form of summarize information. The other reporting commands take
+you want some form of summarized information. The other reporting commands take
 care of that.
 
 =head3 Detail Report
@@ -155,12 +161,12 @@ This just tells how long you were working. Sometimes it is all you need.
 =head1 Simplifying Usage with Aliases
 
 As you use the C<timelog> program more, typing long strings for individual
-tasks becomes annoying. If you are working on the same projects or tasks on a
+events becomes annoying. If you are working on the same projects or tasks on a
 regular basis, you might find typing the detail annoying even if you want it
 for reporting.
 
 The C<timelog> program supports defining aliases in your F<.timelogrc> file.
-These aliases can be either full commands or partial commands. These aliases
+These aliases can be either full events or partial events. These aliases
 are defined in a C<[alias]> section in your F<.timelogrc> file. They take the
 following form:
 
@@ -170,7 +176,7 @@ following form:
 
 When C<timelog> encounters an alias at the beginning of its command line, it
 replaces the alias with the string after the equals. This allows you to define
-full commands or partial commands easily. To use an alias, use the alias as the
+full events or partial events easily. To use an alias, use the alias as the
 command when calling C<timelog>:
 
    $ timelog email
@@ -179,8 +185,8 @@ This gets converted to
 
    $ timelog start +Misc @Email
 
-The I<proja> alias above is a good example of a partial command. You would use
-it like:
+The I<proja> alias above is a good example of a partial event. You would use
+the alias like:
 
    $ timelog proja @ConfCall Client design team
 
@@ -188,7 +194,7 @@ which would be converted to
 
    $ timelog start +ProjectA @ConfCall Client design team
 
-Over time, I often find myself adding new aliases for tasks relating to new
+Over time, I often find myself adding new aliases for events relating to new
 projects and deleting aliases that I no longer use.
 
 =head1 AUTHOR

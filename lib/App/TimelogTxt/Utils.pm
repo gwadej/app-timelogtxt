@@ -6,7 +6,7 @@ use strict;
 use POSIX qw(strftime);
 use Time::Local;
 
-our $VERSION = '0.03_1';
+our $VERSION = '0.04';
 
 my $LAX_DATE_RE  = qr<[0-9]{4}[-/](?:0[1-9]|1[0-2])[-/](?:0[1-9]|[12][0-9]|3[01])>;
 my $TIME_RE      = qr<(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-6][0-9]>;
@@ -133,11 +133,9 @@ __END__
 
 App::TimelogTxt::Utils - Utility functions for the App::TimelogTxt modules.
 
-
 =head1 VERSION
 
-This document describes App::TimelogTxt::Utils version 0.03_1
-
+This document describes App::TimelogTxt::Utils version 0.04
 
 =head1 SYNOPSIS
 
@@ -157,12 +155,12 @@ outside this application.
 
 =head2 canonical_datestamp( $stamp )
 
-Given a date stamp like string that has '/' instead of '-' as separators,
+Given a datestamp-like string that has '/' instead of '-' as separators,
 convert to standard datestamp form: YYYY-MM-DD.
 
 =head2 day_end( $stamp )
 
-Given a properly formated datestamp, find the next datestamp after the one
+Given a properly formatted datestamp, find the next datestamp after the one
 supplied.
 
 =head2 day_num_from_name( $day_name )
@@ -171,8 +169,8 @@ Given a day name in English, return the day number (0-6).
 
 =head2 day_stamp( $day_str )
 
-Return a properly formatted datestamp for the supplied string. This string may
-be any one of the following:
+Return a properly formatted datestamp for the supplied string. The C<$day_str>
+argument may be any one of the following:
 
 =over 4
 
