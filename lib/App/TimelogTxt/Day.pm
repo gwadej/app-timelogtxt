@@ -41,7 +41,7 @@ sub close_day
     my ($self, $last) = @_;
     return if $self->is_complete();
 
-    $self->update_dur( $last, $self->deay_end() );
+    $self->update_dur( $last, $self->day_end() );
     $self->{last_start} = 0;
     return;
 }
@@ -242,6 +242,10 @@ Print formatted day information to the supplied filehandle C<$fh>. If no
 filehandle is supplied, print to C<STDOUT>.
 
 The output only displays the current datestamp and duration for the day.
+
+=head2 $day->is_complete()
+
+Returns C<true> if the day is not currently in a task.
 
 =head2 $d->day_end()
 

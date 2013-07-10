@@ -345,14 +345,17 @@ sub extract_day_tasks
         if( $prev_stamp ne $event->stamp )
         {
             my $new_stamp = $event->stamp;
+            my $new_summary = App::TimelogTxt::Day->new( $new_stamp );
             if( $summary and !$summary->is_complete() )
             {
                 $summary->close_day( $last );
                 # Need to build a new last item beginning at midnight for the
                 # Previous event.
-                $last = App::TimelogTxt::Event->new( $last->task(), $summary->day_end()+1 );
+                my $start = $summary->day_end()+1;
+                $last = App::TimelogTxt::Event->new( $last->task(), $start );
+                $new_summary->start_task( $last );
             }
-            $summary = App::TimelogTxt::Day->new( $new_stamp );
+            $summary = $new_summary;
             push @summaries, $summary;
             $prev_stamp = $new_stamp;
         }
