@@ -20,7 +20,7 @@ my %config = (
     dir    => '',
     defcmd => '',
 );
-my $config_file = "$ENV{HOME}/.timelogrc";
+my $config_file = Timelog::CmdDispatch::_home() . "/.timelogrc";
 
 # Dispatch table for commands
 my %commands = (
@@ -35,6 +35,13 @@ my %commands = (
         clue => App::TimelogTxt::Utils::STOP_CMD(),
         abstract => 'Stop timing the current event.',
         help     => 'Stop timing the current event.',
+    },
+    'init' => {
+        code     => \&init_timelog,
+        clue     => 'init [directory]',
+        abstract => 'Create the timelog directory and configuration.',
+        help     => 'Create the directory and configuration file used by timelog
+if they do not already exist.',
     },
     'push' => {
         code     => \&push_event,
@@ -154,7 +161,7 @@ sub run
     );
 
     my $options = {
-        config           => $config_file,
+        config           => (-f $config_file ? $config_file : undef),
         default_commands => 'help shell',
         'help:post_hint' =>
             "\nwhere [date] is an optional string specifying a date of the form YYYY-MM-DD
@@ -174,6 +181,28 @@ or a day name: yesterday, today, or sunday .. saturday.\n",
 }
 
 # Command handlers
+
+sub init_timelog
+{
+    my ($app, $dir) = @_;
+    require File::Path;
+    my $config = $app->get_config();
+    $dir //= $config->{'dir'};
+    File::Path::mkpath( $dir ) unless -d $dir;
+    unless( -f $config_file )
+    {
+        open my $fh, '>', $config_file;
+        print {$fh} <<"EOF";
+editor=$config->{editor}
+dir=$dir
+defcmd=$config->{defcmd}
+
+[alias]
+EOF
+    }
+    print "timelog initialized\n";
+    return;
+}
 
 sub log_event
 {

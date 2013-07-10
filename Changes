@@ -1,5 +1,9 @@
 Revision history for App-TimelogTxt
 
+0.04  Tue Jul 09 22:20:50 2013
+       Many portability fixes pointed out by CPANTESTERS.
+       Added documentation, including a manual and tutorial.
+       Added an 'init' command to initialize the timelog system.
 0.03  Sun Jun 30 14:37:20 2013
        Initial release.
 

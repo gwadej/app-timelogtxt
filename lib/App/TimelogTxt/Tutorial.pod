@@ -6,6 +6,21 @@ App::TimelogTxt::Tutorial - Describe normal use of the C<timelog> application.
 
 This tutorial applies to L<App::TimelogTxt> version 0.04.
 
+=head1 Getting Started
+
+To use the C<timelog> program, you will need a directory where C<timelog> stores
+its log files. This directory may be specified in the F<.timelogrc> configuration
+in your home directory. If that file does not exist, the program defaults to the
+F<timelog> directory in your home directory.
+
+The B<init> command performs this initialization for you. If the default
+configuration is satisfactory, just run the following command:
+
+  $ timelog init
+
+If you would like to change the directory where the logs are stored, supply
+that directory path as an argument to the B<init> command.
+
 =head1 Example Usage
 
 In this example, we will see most of the C<timelog> commands you would use in a

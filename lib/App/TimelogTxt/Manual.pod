@@ -173,6 +173,13 @@ The remaining commands do not necessarily fit into one of the other categories.
 
 =over 4
 
+=item init [dir]
+
+Prepare the system for use with C<timelog>. First, it creates the directory
+where timelog stores its information, if that directory does not already exist.
+Then, the command creates and initializes the F<.timelogrc> configuration file,
+in the user's home directory, with the information needed to run.
+
 =item edit
 
 Open the timelog file in the current editor. The editor can be specified in the

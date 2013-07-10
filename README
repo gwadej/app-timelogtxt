@@ -25,6 +25,9 @@ To install this module, run the following commands:
 	make test
 	make install
 
+GET STARTED
+
+Follow the "Getting Started" instructions in App::TimelogTxt::Tutorial.
 
 DEPENDENCIES
 
