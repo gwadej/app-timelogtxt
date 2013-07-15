@@ -5,7 +5,7 @@ use strict;
 
 use App::TimelogTxt::Utils;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 sub new {
     my ($class, $stamp) = @_;
@@ -163,7 +163,7 @@ durations.
 
 =head1 VERSION
 
-This document describes App::TimelogTxt::Day version 0.04
+This document describes App::TimelogTxt::Day version 0.05
 
 =head1 SYNOPSIS
 

@@ -11,9 +11,8 @@ use App::TimelogTxt::Utils;
 use App::TimelogTxt::Day;
 use App::TimelogTxt::File;
 use App::TimelogTxt::Event;
-use Cwd ();
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 # Initial configuration information.
 my %config = (
@@ -398,7 +397,7 @@ sub _normalize_path
     my $home = _home();
     $path =~ s/~/$home/;
 
-    return Cwd::abs_path( $path );
+    return $path;
 }
 
 sub _each_logline
@@ -431,11 +430,11 @@ __END__
 
 =head1 NAME
 
-App::TimelogTxt - Core code for timelog utility.
+App::TimelogTxt - Commandline tracking of time for tasks and projects.
 
 =head1 VERSION
 
-This document describes App::TimelogTxt version 0.04
+This document describes App::TimelogTxt version 0.05
 
 =head1 SYNOPSIS
 
