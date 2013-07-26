@@ -5,7 +5,7 @@ use strict;
 
 use App::TimelogTxt::Utils;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 sub new {
     my ($class, $stamp) = @_;
@@ -24,6 +24,7 @@ sub new {
 
 sub is_empty    { return !$_[0]->{dur}; }
 sub is_complete { return !$_[0]->{last_start}; }
+sub date_stamp  { return $_[0]->{stamp}; }
 
 sub update_dur {
     my ($self, $last, $epoch) = @_;
@@ -163,7 +164,7 @@ durations.
 
 =head1 VERSION
 
-This document describes App::TimelogTxt::Day version 0.05
+This document describes App::TimelogTxt::Day version 0.06
 
 =head1 SYNOPSIS
 
@@ -198,6 +199,14 @@ the C<$stamp>. This C<$stamp> must be in the standard format YYYY-MM-DD
 =head2 $d->is_empty()
 
 Returns C<true> only if no events have been added to the day.
+
+=head2 $d->is_complete()
+
+Returns C<true> only the day is complete.
+
+=head2 $d->date_stamp()
+
+Returns the date stamp for the day in C<YYYY-MM-DD> form.
 
 =head2 $d->update_dur( $last, $epoch )
 

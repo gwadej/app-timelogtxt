@@ -1,5 +1,8 @@
 Revision history for App-TimelogTxt
 
+0.06  Fri Jul 26 19:00:00 2013
+       Fixed bug where days other than today with a task still open at midnight
+        were misreported.
 0.05  Mon Jul 15 09:00:00 2013
        Removed absolute path correction in setting .timelogrc location.
        Added LICENSE and repository fields to module metadata.

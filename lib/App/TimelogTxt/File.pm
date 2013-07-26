@@ -3,7 +3,7 @@ package App::TimelogTxt::File;
 use warnings;
 use strict;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 sub new {
     my ($class, $fh, $start, $end) = @_;
@@ -58,7 +58,7 @@ App::TimelogTxt::File - Simplify reading part of the timelog.txt file
 
 =head1 VERSION
 
-This document describes App::TimelogTxt::File version 0.05
+This document describes App::TimelogTxt::File version 0.06
 
 =head1 SYNOPSIS
 

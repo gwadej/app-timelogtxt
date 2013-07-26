@@ -4,7 +4,7 @@ App::TimelogTxt::Tutorial - Describe normal use of the C<timelog> application.
 
 =head1 VERSION
 
-This tutorial applies to L<App::TimelogTxt> version 0.05.
+This tutorial applies to L<App::TimelogTxt> version 0.06.
 
 =head1 Getting Started
 
