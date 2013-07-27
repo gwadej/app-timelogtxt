@@ -200,6 +200,10 @@ The supplied datestamp is returned.
 
 =back
 
+=head2 prev_stamp( $stamp )
+
+Return a date stamp for the day before the date represented by C<$stamp>.
+
 =head2 fmt_date( $time )
 
 Return a properly formatted datestamp for the day corresponding to C<$time>
