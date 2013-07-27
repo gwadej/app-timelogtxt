@@ -328,11 +328,15 @@ sub extract_day_tasks
     my $stamp = App::TimelogTxt::Utils::day_stamp( $day );
     die "No day provided.\n" unless defined $stamp;
     my $estamp = App::TimelogTxt::Utils::day_end( $eday ? App::TimelogTxt::Utils::day_stamp( $eday ) : $stamp );
+
+    # I need to start one day before to deal with the possibility that first
+    #   task was held over midnight.
+    my $pstamp = App::TimelogTxt::Utils::prev_stamp( $stamp );
     my ( $summary, $last, @summaries );
     my $prev_stamp = '';
 
     open my $fh, '<', $app->_logfile;
-    my $file = App::TimelogTxt::File->new( $fh, $stamp, $estamp );
+    my $file = App::TimelogTxt::File->new( $fh, $pstamp, $estamp );
 
     use Data::Dumper;
     while( defined( my $line = $file->readline ) )
@@ -362,6 +366,10 @@ sub extract_day_tasks
         $summary->start_task( $event );
         $last = ($event->is_stop() ? undef : $event );
     }
+
+    # If the first summary is the day before we were supposed to report,
+    #   drop it.
+    shift @summaries if $summaries[0]->date_stamp() eq $pstamp;
 
     return [] unless $summary;
     my $end_time;

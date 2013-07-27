@@ -72,6 +72,13 @@ sub stamp_to_localtime
     return timelocal( 59, 59, 23, reverse @date );
 }
 
+sub prev_stamp
+{
+    my ($stamp) = @_;
+    my $epoch = stamp_to_localtime( $stamp ) - 12 * 3600; # noon today
+    return fmt_date( $epoch - 86400 ); # noon yesterday
+}
+
 sub day_stamp
 {
     my ( $day ) = @_;
