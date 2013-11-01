@@ -12,7 +12,7 @@ use App::TimelogTxt::Day;
 use App::TimelogTxt::File;
 use App::TimelogTxt::Event;
 
-our $VERSION = '0.06';
+our $VERSION = '0.10';
 
 # Initial configuration information.
 my %config = (
@@ -236,9 +236,9 @@ sub list_projects
 
 sub daily_report
 {
-    my ( $app, $day, $eday ) = @_;
+    my ( $app, @filters ) = @_;
 
-    my $summaries = extract_day_tasks( $app, $day, $eday );
+    my $summaries = extract_day_tasks( $app, @filters );
 
     foreach my $summary ( @{$summaries} )
     {
@@ -249,9 +249,9 @@ sub daily_report
 
 sub daily_summary
 {
-    my ( $app, $day, $eday ) = @_;
+    my ( $app, @filters ) = @_;
 
-    my $summaries = extract_day_tasks( $app, $day, $eday );
+    my $summaries = extract_day_tasks( $app, @filters );
 
     foreach my $summary ( @{$summaries} )
     {
@@ -262,9 +262,9 @@ sub daily_summary
 
 sub report_hours
 {
-    my ( $app, $day, $eday ) = @_;
+    my ( $app, @filters ) = @_;
 
-    my $summaries = extract_day_tasks( $app, $day, $eday );
+    my $summaries = extract_day_tasks( $app, @filters );
 
     foreach my $summary ( @{$summaries} )
     {
@@ -323,15 +323,9 @@ sub list_stack
 
 sub extract_day_tasks
 {
-    my ( $app, $day, $eday ) = @_;
+    my ( $app, @args ) = @_;
 
-    my $stamp = App::TimelogTxt::Utils::day_stamp( $day );
-    die "No day provided.\n" unless defined $stamp;
-    my $estamp = App::TimelogTxt::Utils::day_end( $eday ? App::TimelogTxt::Utils::day_stamp( $eday ) : $stamp );
-
-    # I need to start one day before to deal with the possibility that first
-    #   task was held over midnight.
-    my $pstamp = App::TimelogTxt::Utils::prev_stamp( $stamp );
+    my ($stamp, $estamp, $pstamp, @filters) = process_extraction_args( @args );
     my ( $summary, $last, @summaries );
     my $prev_stamp = '';
 
@@ -375,7 +369,7 @@ sub extract_day_tasks
     my $end_time;
     if( !$summary->is_complete() )
     {
-        my $datestamp = $summary->date_stamp() || $day;
+        my $datestamp = $summary->date_stamp() || $stamp;
         if( App::TimelogTxt::Utils::is_today( $datestamp ) )
         {
             $end_time = time;
@@ -392,6 +386,28 @@ sub extract_day_tasks
     return if $summary->is_empty;
 
     return \@summaries;
+}
+
+sub process_extraction_args
+{
+    my ($day, @args) = @_;
+
+    # First argument is always the day
+    my $stamp = App::TimelogTxt::Utils::day_stamp( $day );
+    die "No day provided.\n" unless defined $stamp;
+    my $eday = shift @args;
+    my $estamp = App::TimelogTxt::Utils::day_end( $eday ? App::TimelogTxt::Utils::day_stamp( $eday ) : $stamp );
+    if( !defined $estamp )
+    {
+        $estamp = App::TimelogTxt::Utils::day_end( $stamp );
+        unshift @args, $eday if $eday;
+    }
+
+    # I need to start one day before to deal with the possibility that first
+    #   task was held over midnight.
+    my $pstamp = App::TimelogTxt::Utils::prev_stamp( $stamp );
+
+    return ($stamp, $estamp, $pstamp, @args);
 }
 
 # Utility functions
