@@ -1,19 +1,21 @@
 Revision history for App-TimelogTxt
 
-0.06  Sat Jul 26 00:10:00 2013
-       Fixed bug where days other than today with a task still open at midnight
-        were misreported.
-       Fixed a second bug where the day before a report begins had a task open
-        at midnight. We need to account for that in the first day of report.
-0.05  Mon Jul 15 09:00:00 2013
-       Removed absolute path correction in setting .timelogrc location.
-       Added LICENSE and repository fields to module metadata.
-0.04  Tue Jul 10 14:20:50 2013
-       Many portability fixes pointed out by CPANTESTERS.
-       Added documentation, including a manual and tutorial.
-       Added an 'init' command to initialize the timelog system.
-       Added consistent handling of '~' in paths.
-       Corrected handling of time when a task crosses midnight.
-0.03  Sun Jun 30 14:37:20 2013
-       Initial release.
+0.10  2013-11-05T19:00:00-0600
+  - Added ability to filter reports by project name
+0.06  2013-07-26T00:10:00-0500
+  - Fixed bug where days other than today with a task still open at midnight
+    were misreported.
+  - Fixed a second bug where the day before a report begins had a task open
+    at midnight. We need to account for that in the first day of report.
+0.05  2013-07-15T09:00:00-0500
+  - Removed absolute path correction in setting .timelogrc location.
+  - Added LICENSE and repository fields to module metadata.
+0.04  2013-07-10T14:20:50-0500
+  - Many portability fixes pointed out by CPANTESTERS.
+  - Added documentation, including a manual and tutorial.
+  - Added an 'init' command to initialize the timelog system.
+  - Added consistent handling of '~' in paths.
+  - Corrected handling of time when a task crosses midnight.
+0.03  2013-06-30T14:37:20-0500
+  - Initial release.
 
