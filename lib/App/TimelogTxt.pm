@@ -89,21 +89,22 @@ if argument supplied.',
     },
     'report' => {
         code     => \&daily_report,
-        clue     => 'report [date [end date]]',
+        clue     => 'report [date [end date]] [project regexes]',
         abstract => 'Task report.',
-        help     => 'Display a report for the specified days.',
+        help     => 'Display a report for the specified days and projects.',
     },
     'summary' => {
         code     => \&daily_summary,
-        clue     => 'summary [date [end date]]',
+        clue     => 'summary [date [end date]] [project regexes]',
         abstract => 'Short summary report.',
         help     => q{Display a summary of the appropriate days' projects.},
     },
     'hours' => {
         code     => \&report_hours,
-        clue     => 'hours [date [end date]]',
+        clue     => 'hours [date [end date]] [project regexes]',
         abstract => 'Hours report.',
-        help     => q{Display the hours worked for each of the appropriate days.},
+        help     => q{Display the hours worked for each of the appropriate days
+and projects.},
     },
 );
 
@@ -154,10 +155,12 @@ sub run
         default_commands => 'help shell',
         'help:post_hint' =>
             "\nwhere [date] is an optional string specifying a date of the form YYYY-MM-DD
-or a day name: yesterday, today, or sunday .. saturday.\n",
+or a day name: yesterday, today, or sunday .. saturday and [project regexes]
+is a list of strings of regular expressions matching project names.\n",
         'help:post_help' =>
             "\nwhere [date] is an optional string specifying a date of the form YYYY-MM-DD
-or a day name: yesterday, today, or sunday .. saturday.\n",
+or a day name: yesterday, today, or sunday .. saturday and [project regexes]
+is a list of strings of regular expressions matching project names.\n",
     };
     my $app = Timelog::CmdDispatch->new( \%commands, $options );
 
