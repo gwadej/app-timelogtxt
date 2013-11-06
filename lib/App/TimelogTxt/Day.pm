@@ -6,7 +6,7 @@ use strict;
 use App::TimelogTxt::Utils;
 use List::Util qw/sum/;
 
-our $VERSION = '0.10';
+our $VERSION = '0.11';
 
 sub new {
     my ($class, $stamp) = @_;
@@ -26,7 +26,7 @@ sub new {
 sub is_empty    { return !$_[0]->{dur}; }
 sub is_complete { return !$_[0]->{last_start}; }
 sub date_stamp  { return $_[0]->{stamp}; }
-sub has_tasks   { return !!keys $_[0]->{tasks}; }
+sub has_tasks   { return !!keys %{$_[0]->{tasks}}; }
 
 sub update_dur
 {
@@ -180,7 +180,7 @@ durations.
 
 =head1 VERSION
 
-This document describes App::TimelogTxt::Day version 0.10
+This document describes App::TimelogTxt::Day version 0.11
 
 =head1 SYNOPSIS
 

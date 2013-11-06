@@ -1,5 +1,7 @@
 Revision history for App-TimelogTxt
 
+0.11  2013-11-05T21:15:00-0600
+  - Fixed accidental auto-dereference noted by CPANTEST suite.
 0.10  2013-11-05T19:00:00-0600
   - Added ability to filter reports by project name
 0.06  2013-07-26T00:10:00-0500
