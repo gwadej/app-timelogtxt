@@ -20,6 +20,7 @@ WriteMakefile(
         'Config::Tiny'     => 0,
         'autodie'          => 0,
         'App::CmdDispatch' => 0.41,
+        'List::Util'       => 0,
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'App-TimelogTxt-*' },

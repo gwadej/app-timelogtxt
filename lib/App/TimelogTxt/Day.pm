@@ -4,8 +4,9 @@ use warnings;
 use strict;
 
 use App::TimelogTxt::Utils;
+use List::Util qw/sum/;
 
-our $VERSION = '0.06';
+our $VERSION = '0.10';
 
 sub new {
     my ($class, $stamp) = @_;
@@ -25,8 +26,10 @@ sub new {
 sub is_empty    { return !$_[0]->{dur}; }
 sub is_complete { return !$_[0]->{last_start}; }
 sub date_stamp  { return $_[0]->{stamp}; }
+sub has_tasks   { return !!keys $_[0]->{tasks}; }
 
-sub update_dur {
+sub update_dur
+{
     my ($self, $last, $epoch) = @_;
     my $curr_dur = $last ? $epoch - $last->epoch : 0;
 
@@ -35,6 +38,19 @@ sub update_dur {
     $self->{dur} += $curr_dur;
 
     return;
+}
+
+sub day_filtered_by_project
+{
+    my ($self, $project) = @_;
+    my $result = __PACKAGE__->new( $self->date_stamp );
+    $project = qr/$project/ unless ref $project;
+    my @tasks = grep { $self->{tasks}->{$_}->{proj} =~ $project } keys %{$self->{tasks}};
+    @{$result->{tasks}}{@tasks} = @{$self->{tasks}}{@tasks};
+    my @projs = grep { $_ =~ $project } keys %{$self->{proj_dur}};
+    @{$result->{proj_dur}}{@projs} = @{$self->{proj_dur}}{@projs};
+    $result->{dur} = sum( 0, values %{$result->{proj_dur}} );
+    return $result;
 }
 
 sub close_day
@@ -164,7 +180,7 @@ durations.
 
 =head1 VERSION
 
-This document describes App::TimelogTxt::Day version 0.06
+This document describes App::TimelogTxt::Day version 0.10
 
 =head1 SYNOPSIS
 

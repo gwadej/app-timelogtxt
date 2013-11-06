@@ -4,7 +4,7 @@ use warnings;
 use strict;
 use autodie;
 
-our $VERSION = '0.06';
+our $VERSION = '0.10';
 
 sub new
 {
@@ -110,7 +110,7 @@ App::TimelogTxt::Stack - Interface to the stack file for the timelog application
 
 =head1 VERSION
 
-This document describes App::TimelogTxt::Stack version 0.06
+This document describes App::TimelogTxt::Stack version 0.10
 
 =head1 SYNOPSIS
 

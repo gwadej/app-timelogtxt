@@ -385,7 +385,22 @@ sub extract_day_tasks
 
     return if $summary->is_empty;
 
-    return \@summaries;
+    return filter_summaries( \@filters, \@summaries );
+}
+
+sub filter_summaries
+{
+    my ( $filters, $summaries ) = @_;
+
+    return $summaries unless @{$filters};
+
+    my $filter = join( '|', map { "(?:$_)" } @{$filters} );
+    my $filter_re = qr/$filter/;
+    return [
+        grep { $_->has_tasks }
+        map { $_->day_filtered_by_project( $filter_re ) }
+        @{$summaries}
+    ];
 }
 
 sub process_extraction_args
@@ -469,7 +484,7 @@ App::TimelogTxt - Commandline tracking of time for tasks and projects.
 
 =head1 VERSION
 
-This document describes App::TimelogTxt version 0.06
+This document describes App::TimelogTxt version 0.10
 
 =head1 SYNOPSIS
 

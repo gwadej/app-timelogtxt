@@ -1,4 +1,4 @@
-App-TimelogTxt version 0.05
+App-TimelogTxt version 0.10
 
 This is a modulized version of a script I've been using for the last few years
 to track my time spent on various projects at home and at work. It is based
@@ -31,7 +31,7 @@ Follow the "Getting Started" instructions in App::TimelogTxt::Tutorial.
 
 DEPENDENCIES
 
-Time::Local, Getopt::Long, Config::Tiny, App::CmdDispatch.
+Time::Local, Getopt::Long, Config::Tiny, List::Util, App::CmdDispatch.
 
 COPYRIGHT AND LICENCE
 

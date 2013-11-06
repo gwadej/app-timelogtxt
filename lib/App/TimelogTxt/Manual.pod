@@ -5,7 +5,7 @@ C<timelog> application.
 
 =head1 VERSION
 
-This manual applies to L<App::TimelogTxt> version 0.06.
+This manual applies to L<App::TimelogTxt> version 0.10.
 
 =head1 INTRODUCTION
 
