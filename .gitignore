@@ -13,3 +13,4 @@ App-TimelogTxt-*
 MYMETA.yml
 MYMETA.json
 *.bak
+.*.swp
