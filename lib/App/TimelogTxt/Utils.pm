@@ -6,7 +6,7 @@ use strict;
 use POSIX qw(strftime);
 use Time::Local;
 
-our $VERSION = '0.11';
+our $VERSION = '0.12';
 
 my $LAX_DATE_RE  = qr<[0-9]{4}[-/](?:0[1-9]|1[0-2])[-/](?:0[1-9]|[12][0-9]|3[01])>;
 my $TIME_RE      = qr<(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-6][0-9]>;
@@ -48,6 +48,18 @@ sub is_today
 {
     my ($day) = @_;
     return (!$day or $day eq $TODAY or $day eq today_stamp());
+}
+
+sub is_stop_cmd
+{
+    my ($task) = @_;
+    return $task eq STOP_CMD();
+}
+
+sub has_project
+{
+    my ($task) = @_;
+    return scalar( $task =~ /(?: |\A)\+\w+/ );
 }
 
 sub today_stamp
@@ -143,7 +155,7 @@ App::TimelogTxt::Utils - Utility functions for the App::TimelogTxt modules.
 
 =head1 VERSION
 
-This document describes App::TimelogTxt::Utils version 0.11
+This document describes App::TimelogTxt::Utils version 0.12
 
 =head1 SYNOPSIS
 

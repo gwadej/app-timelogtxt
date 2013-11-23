@@ -12,7 +12,7 @@ use App::TimelogTxt::Day;
 use App::TimelogTxt::File;
 use App::TimelogTxt::Event;
 
-our $VERSION = '0.11';
+our $VERSION = '0.12';
 
 # Initial configuration information.
 my %config = (
@@ -200,9 +200,17 @@ EOF
 sub log_event
 {
     my $app    = shift;
-    open my $fh, '>>', $app->_logfile;
-    my $event = App::TimelogTxt::Event->new( "@_", time );
-    print {$fh} $event->to_string, "\n";
+    my $task = "@_";
+    if( App::TimelogTxt::Utils::is_stop_cmd( $task ) || App::TimelogTxt::Utils::has_project( $task ) )
+    {
+        open my $fh, '>>', $app->_logfile;
+        my $event = App::TimelogTxt::Event->new( $task, time );
+        print {$fh} $event->to_string, "\n";
+    }
+    else
+    {
+        die "Event has no project.\n";
+    }
     return;
 }
 
@@ -335,7 +343,6 @@ sub extract_day_tasks
     open my $fh, '<', $app->_logfile;
     my $file = App::TimelogTxt::File->new( $fh, $pstamp, $estamp );
 
-    use Data::Dumper;
     while( defined( my $line = $file->readline ) )
     {
         my $event;
@@ -487,7 +494,7 @@ App::TimelogTxt - Commandline tracking of time for tasks and projects.
 
 =head1 VERSION
 
-This document describes App::TimelogTxt version 0.11
+This document describes App::TimelogTxt version 0.12
 
 =head1 SYNOPSIS
 

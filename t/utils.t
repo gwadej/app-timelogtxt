@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use Test::Most tests => 60;
+use Test::Most tests => 65;
 use Test::NoWarnings;
 
 use strict;
@@ -11,6 +11,13 @@ use App::TimelogTxt::Utils;
 
 is( App::TimelogTxt::Utils::TODAY(), 'today', 'Verify today constant' );
 is( App::TimelogTxt::Utils::STOP_CMD(), 'stop', 'Verify stop command constant' );
+
+ok( App::TimelogTxt::Utils::is_stop_cmd( App::TimelogTxt::Utils::STOP_CMD() ), 'Verify stop command check.' );
+ok( !App::TimelogTxt::Utils::is_stop_cmd( 'zyzzy' ), 'Non-stop command recognized' );
+
+ok( App::TimelogTxt::Utils::has_project( '+Project @Task Detail' ), 'Project test' );
+ok( !App::TimelogTxt::Utils::has_project( 'Project @Task Detail' ), 'Missing project' );
+ok( !App::TimelogTxt::Utils::has_project( 'Project+ @Task Detail' ), '+ not at the beginning' );
 
 ok( App::TimelogTxt::Utils::is_today( 'today' ), 'Today check succeeds' );
 ok( App::TimelogTxt::Utils::is_today( '' ), 'Today check of none succeeds' );
