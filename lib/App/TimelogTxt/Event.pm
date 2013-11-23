@@ -5,7 +5,7 @@ use strict;
 use Time::Local;
 use App::TimelogTxt::Utils;
 
-our $VERSION = '0.11';
+our $VERSION = '0.12';
 
 sub new
 {
@@ -74,7 +74,7 @@ sub stamp
 sub is_stop
 {
     my ($self) = @_;
-    return ($_[0]->{task} eq App::TimelogTxt::Utils::STOP_CMD());
+    return App::TimelogTxt::Utils::is_stop_cmd( $_[0]->{task} );
 }
 
 1;
@@ -86,7 +86,7 @@ App::TimelogTxt::Event - Class representing an event to log.
 
 =head1 VERSION
 
-This document describes ModName version 0.11
+This document describes ModName version 0.12
 
 =head1 SYNOPSIS
 
