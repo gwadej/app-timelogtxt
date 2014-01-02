@@ -26,7 +26,14 @@ WriteMakefile(
     clean               => { FILES => 'App-TimelogTxt-*' },
     META_MERGE          => {
         resources => {
-            repository => 'https://github.com/gwadej/app-timelogtxt',
+            repository => {
+                type => 'git',
+                url  => 'https://github.com/gwadej/app-timelogtxt.git',
+                web  => 'https://github.com/gwadej/timelogtxt',
+            },
         },
+    },
+    test               => {
+        TESTS => 't/*.t xt/*.t',
     },
 );
