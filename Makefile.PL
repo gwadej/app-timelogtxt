@@ -19,9 +19,10 @@ WriteMakefile(
         'Getopt::Long'     => 0,
         'Config::Tiny'     => 0,
         'autodie'          => 0,
-        'App::CmdDispatch' => 0.41,
+        'App::CmdDispatch' => 0.42,
         'List::Util'       => 0,
     },
+    MIN_PERL_VERSION    => 5.010,
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'App-TimelogTxt-*' },
     META_MERGE          => {
