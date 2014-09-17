@@ -1,9 +1,10 @@
 Revision history for App-TimelogTxt
 
-????  ??????????????
+0.20  2014-09-17T12:00:00-0600
   - Modify testing code to use xt-based author tests
   - Update metadata for more repo information
   - Add minimum perl version test
+  - Add 'curr' command to display only most recent task.
 0.12  2013-11-22T18:15:00-0600
   - Add a check requiring a project when specifying an event.
 0.11  2013-11-05T21:15:00-0600

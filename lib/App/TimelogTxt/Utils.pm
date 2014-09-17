@@ -6,7 +6,7 @@ use strict;
 use POSIX qw(strftime);
 use Time::Local;
 
-our $VERSION = '0.13';
+our $VERSION = '0.20';
 
 my $LAX_DATE_RE  = qr<[0-9]{4}[-/](?:0[1-9]|1[0-2])[-/](?:0[1-9]|[12][0-9]|3[01])>;
 my $TIME_RE      = qr<(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-6][0-9]>;
@@ -155,7 +155,7 @@ App::TimelogTxt::Utils - Utility functions for the App::TimelogTxt modules.
 
 =head1 VERSION
 
-This document describes App::TimelogTxt::Utils version 0.13
+This document describes App::TimelogTxt::Utils version 0.20
 
 =head1 SYNOPSIS
 

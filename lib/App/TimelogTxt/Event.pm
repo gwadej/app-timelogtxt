@@ -5,7 +5,7 @@ use strict;
 use Time::Local;
 use App::TimelogTxt::Utils;
 
-our $VERSION = '0.13';
+our $VERSION = '0.20';
 
 sub new
 {
@@ -86,7 +86,7 @@ App::TimelogTxt::Event - Class representing an event to log.
 
 =head1 VERSION
 
-This document describes ModName version 0.13
+This document describes ModName version 0.20
 
 =head1 SYNOPSIS
 

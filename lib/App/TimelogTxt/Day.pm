@@ -6,7 +6,7 @@ use strict;
 use App::TimelogTxt::Utils;
 use List::Util qw/sum/;
 
-our $VERSION = '0.13';
+our $VERSION = '0.20';
 
 sub new {
     my ($class, $stamp) = @_;
@@ -188,7 +188,7 @@ durations.
 
 =head1 VERSION
 
-This document describes App::TimelogTxt::Day version 0.13
+This document describes App::TimelogTxt::Day version 0.20
 
 =head1 SYNOPSIS
 

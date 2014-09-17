@@ -12,7 +12,7 @@ use App::TimelogTxt::Day;
 use App::TimelogTxt::File;
 use App::TimelogTxt::Event;
 
-our $VERSION = '0.13';
+our $VERSION = '0.20';
 
 # Initial configuration information.
 my %config = (
@@ -534,7 +534,7 @@ App::TimelogTxt - Commandline tracking of time for tasks and projects.
 
 =head1 VERSION
 
-This document describes App::TimelogTxt version 0.13
+This document describes App::TimelogTxt version 0.20
 
 =head1 SYNOPSIS
 
