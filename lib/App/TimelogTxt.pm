@@ -12,7 +12,7 @@ use App::TimelogTxt::Day;
 use App::TimelogTxt::File;
 use App::TimelogTxt::Event;
 
-our $VERSION = '0.12';
+our $VERSION = '0.13';
 
 # Initial configuration information.
 my %config = (
@@ -338,8 +338,8 @@ sub list_stack
 
 sub current_event
 {
-    my ($app, $fh) = @_;
-    $fh ||= \*STDOUT;
+    my ($app) = @_;
+    my $fh = \*STDOUT;
 
     my $event = _get_last_full_event( $app );
     if( $event->is_stop )
@@ -529,7 +529,7 @@ App::TimelogTxt - Commandline tracking of time for tasks and projects.
 
 =head1 VERSION
 
-This document describes App::TimelogTxt version 0.12
+This document describes App::TimelogTxt version 0.13
 
 =head1 SYNOPSIS
 
@@ -650,6 +650,13 @@ If C<$arg> is C<'all'>, clear the stack file.
 Implementation of the 'lstk' command.
 
 Print the current stack on STDOUT.
+
+=head2 current_event( $app )
+
+Implementation of the 'curr' command.
+
+Print the most recennt timelog event on STDOUT along with the duration since
+the start of the event. If not in an event, report that.
 
 =head1 CONFIGURATION AND ENVIRONMENT
 
