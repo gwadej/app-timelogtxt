@@ -106,6 +106,13 @@ if argument supplied.',
         help     => q{Display the hours worked for each of the appropriate days
 and projects.},
     },
+    'curr' => {
+        code     => \&current_event,
+        clue     => 'curr',
+        abstract => 'Display current event.',
+        help     => q{Display the current event (if any) and the time since the
+event started.},
+    },
 );
 
 # Sub class of App::CmdDispatch that initializes configuration information
@@ -329,6 +336,29 @@ sub list_stack
     return;
 }
 
+sub current_event
+{
+    my ($app, $fh) = @_;
+    $fh ||= \*STDOUT;
+
+    my $event = _get_last_full_event( $app );
+    if( $event->is_stop )
+    {
+        print {$fh} "Not in event.\n";
+        return;
+    }
+
+    # Use day summary object to get duration and to report.
+    my $summary = App::TimelogTxt::Day->new( $event->stamp );
+    $summary->start_task( $event );
+    $summary->update_dur( $event, time );
+
+    print {$fh} $event->to_string, "\nDuration: ";
+    $summary->print_duration( $fh );
+
+    return;
+}
+
 # Extract the daily events from the timelog.txt file and generate the list of Day
 # objects that encapsulates them.
 
@@ -475,12 +505,17 @@ sub _stack
     return App::TimelogTxt::Stack->new( $app->_stackfile );
 }
 
-sub _get_last_event
+sub _get_last_full_event
 {
     my ( $app ) = @_;
     my $event_line;
     _each_logline( $app, sub { $event_line = $_; } );
-    my $event = App::TimelogTxt::Event->new_from_line( $event_line );
+    return App::TimelogTxt::Event->new_from_line( $event_line );
+}
+
+sub _get_last_event
+{
+    my $event = _get_last_full_event( @_ );
 
     return $event->task;
 }
