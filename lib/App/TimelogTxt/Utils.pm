@@ -235,6 +235,14 @@ Returns C<true> if C<$stamp> is a properly formatted datestamp.
 
 Returns C<true> if C<$day_str> is either 'today' or the empty string.
 
+=head2 is_stop_cmd( $task )
+
+Returns C<true> if the supplied C<$task> is equal to the C<STOP_CMD> constant.
+
+=head2 has_project( $task )
+
+Returns C<true> if the supplied C<$task> has a project entry.
+
 =head2 parse_event_line( $line )
 
 Parse the supplied string into the datestamp, time, and the rest of the line,

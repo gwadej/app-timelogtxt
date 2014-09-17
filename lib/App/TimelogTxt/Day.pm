@@ -276,6 +276,20 @@ filehandle is supplied, print to C<STDOUT>.
 
 The output only displays the current datestamp and duration for the day.
 
+=head2 $d->print_duration( $fh )
+
+Print formatted duration information to the supplied filehandle C<$fh>. If no
+filehandle is supplied, print to C<STDOUT>.
+
+=head2 $d->has_tasks()
+
+Returns C<true> if the day contains one or more tasks.
+
+=head2 $d->day_filtered_by_project( $project )
+
+Make a copy of the current C<Day> object containing only the tasks associated
+with the supplied  C<$project>.
+
 =head2 $day->is_complete()
 
 Returns C<true> if the day is not currently in a task.
