@@ -125,11 +125,16 @@ event started.},
     {
         my $self = App::CmdDispatch::new( @_ );
         $self->init();
+        $self->{_timelog_out_fh} = \*STDOUT;
         return $self;
     }
 
     sub _logfile   { return $_[0]->get_config()->{'logfile'}; }
     sub _stackfile { return $_[0]->get_config()->{'stackfile'}; }
+    sub _out_fh    { return $_[0]->{_timelog_out_fh}; }
+
+    # Support injection of an output filehandle for testing.
+    sub _set_out_fh { return $_[0]->{_timelog_out_fh} = $_[1]; }
 
     sub init
     {
@@ -260,7 +265,7 @@ sub daily_report
 
     foreach my $summary ( @{$summaries} )
     {
-        $summary->print_day_detail( \*STDOUT );
+        $summary->print_day_detail( $app->_out_fh );
     }
     return;
 }
@@ -273,7 +278,7 @@ sub daily_summary
 
     foreach my $summary ( @{$summaries} )
     {
-        $summary->print_day_summary( \*STDOUT );
+        $summary->print_day_summary( $app->_out_fh );
     }
     return;
 }
@@ -286,7 +291,7 @@ sub report_hours
 
     foreach my $summary ( @{$summaries} )
     {
-        $summary->print_hours( \*STDOUT );
+        $summary->print_hours( $app->_out_fh );
     }
     return;
 }
@@ -332,14 +337,14 @@ sub list_stack
     my ($app) = @_;
     return unless -f $app->_stackfile;
     my $stack = _stack( $app );
-    $stack->list( \*STDOUT );
+    $stack->list( $app->_out_fh );
     return;
 }
 
 sub current_event
 {
     my ($app) = @_;
-    my $fh = \*STDOUT;
+    my $fh = $app->_out_fh;
 
     my $event = _get_last_full_event( $app );
     if( $event->is_stop )
