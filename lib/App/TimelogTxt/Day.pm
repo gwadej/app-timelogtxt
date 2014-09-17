@@ -121,6 +121,14 @@ sub print_hours {
     return;
 }
 
+sub print_duration {
+    my ($self, $fh) = @_;
+    $fh ||= \*STDOUT;
+
+    print {$fh} _format_dur( $self->{dur} ), "\n";
+    return;
+}
+
 sub day_end
 {
     my ($self) = @_;
