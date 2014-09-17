@@ -371,7 +371,7 @@ sub extract_day_tasks
 {
     my ( $app, @args ) = @_;
 
-    my ($stamp, $estamp, $pstamp, @filters) = process_extraction_args( @args );
+    my ($stamp, $estamp, $pstamp, @filters) = _process_extraction_args( @args );
     my ( $summary, $last, @summaries );
     my $prev_stamp = '';
 
@@ -408,7 +408,7 @@ sub extract_day_tasks
 
     # If the first summary is the day before we were supposed to report,
     #   drop it.
-    shift @summaries if $summaries[0]->date_stamp() eq $pstamp;
+    shift @summaries if @summaries && $summaries[0]->date_stamp() eq $pstamp;
 
     return [] unless $summary;
     my $end_time;
@@ -430,10 +430,10 @@ sub extract_day_tasks
 
     return if $summary->is_empty;
 
-    return filter_summaries( \@filters, \@summaries );
+    return _filter_summaries( \@filters, \@summaries );
 }
 
-sub filter_summaries
+sub _filter_summaries
 {
     my ( $filters, $summaries ) = @_;
 
@@ -448,7 +448,7 @@ sub filter_summaries
     ];
 }
 
-sub process_extraction_args
+sub _process_extraction_args
 {
     my ($day, @args) = @_;
 
