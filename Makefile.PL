@@ -8,11 +8,17 @@ WriteMakefile(
     VERSION_FROM        => 'lib/App/TimelogTxt.pm',
     ABSTRACT_FROM       => 'lib/App/TimelogTxt.pm',
     LICENSE             => 'perl',
+    MIN_PERL_VERSION    => 5.010,
     EXE_FILES           => [ 'bin/timelog' ],
     PL_FILES            => {},
-    PREREQ_PM => {
+    CONFIGURE_REQUIRES  => {
+        'ExtUtils::MakeMaker' => 0,
+    },
+    BUILD_REQUIRES => {
         'Test::Most'       => 0,
         'Test::NoWarnings' => 0,
+    },
+    PREREQ_PM => {
         'POSIX'            => 0,
         'File::Path'       => 0,
         'Time::Local'      => 0,
@@ -22,7 +28,6 @@ WriteMakefile(
         'App::CmdDispatch' => 0.42,
         'List::Util'       => 0,
     },
-    MIN_PERL_VERSION    => 5.010,
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'App-TimelogTxt-*' },
     META_MERGE          => {
