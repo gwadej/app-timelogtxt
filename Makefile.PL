@@ -31,6 +31,7 @@ WriteMakefile(
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'App-TimelogTxt-*' },
     META_MERGE          => {
+        'meta-spec' => { version => 2 },
         resources => {
             repository => {
                 type => 'git',
