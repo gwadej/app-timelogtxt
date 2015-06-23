@@ -12,7 +12,7 @@ use App::TimelogTxt::Day;
 use App::TimelogTxt::File;
 use App::TimelogTxt::Event;
 
-our $VERSION = '0.20';
+our $VERSION = '0.21';
 
 # Initial configuration information.
 my %config = (
@@ -412,7 +412,11 @@ sub extract_day_tasks
 
     return [] unless $summary;
     my $end_time;
-    if( !$summary->is_complete() )
+    if( $summary->is_complete() )
+    {
+        $summary->update_dur( $last, $end_time );
+    }
+    else
     {
         my $datestamp = $summary->date_stamp() || $stamp;
         if( App::TimelogTxt::Utils::is_today( $datestamp ) )
@@ -425,8 +429,6 @@ sub extract_day_tasks
             $end_time = App::TimelogTxt::Utils::stamp_to_localtime( $datestamp );
         }
     }
-
-    $summary->update_dur( $last, $end_time );
 
     return if $summary->is_empty;
 
@@ -534,7 +536,7 @@ App::TimelogTxt - Commandline tracking of time for tasks and projects.
 
 =head1 VERSION
 
-This document describes App::TimelogTxt version 0.20
+This document describes App::TimelogTxt version 0.21
 
 =head1 SYNOPSIS
 

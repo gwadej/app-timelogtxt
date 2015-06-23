@@ -1,5 +1,8 @@
 Revision history for App-TimelogTxt
 
+0.21  2014-06-23
+  - Fixed bug where last project/task had too large a duration if it did not
+    close on the last day of the reporting period.
 0.20  2015-04-09
   - Modify testing code to use xt-based author tests
   - Update metadata for more repo information
