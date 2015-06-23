@@ -1,6 +1,8 @@
 Revision history for App-TimelogTxt
 
-0.21  2014-06-23
+0.22  2015-06-23
+  - Corrected bugfix to handle in task today reporting.
+0.21  2015-06-23
   - Fixed bug where last project/task had too large a duration if it did not
     close on the last day of the reporting period.
 0.20  2015-04-09
